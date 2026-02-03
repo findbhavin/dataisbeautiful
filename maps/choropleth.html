@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>US Mobile Subscribers - Choropleth Map</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/topojson@3"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #b0b0b0;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+        
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        label {
+            color: #e0e0e0;
+            font-weight: 500;
+            margin-right: 10px;
+        }
+        
+        select {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 2px solid #4a5568;
+            background: #2d3748;
+            color: #e0e0e0;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        select:hover {
+            border-color: #60a5fa;
+            background: #374151;
+        }
+        
+        select:focus {
+            outline: none;
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+        }
+        
+        .map-container {
+            background: #1f2937;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        svg {
+            display: block;
+            margin: 0 auto;
+        }
+        
+        .state {
+            stroke: #374151;
+            stroke-width: 0.5;
+            cursor: pointer;
+            transition: stroke-width 0.2s;
+        }
+        
+        .state:hover {
+            stroke: #fff;
+            stroke-width: 1.5;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: rgba(31, 41, 55, 0.95);
+            border: 1px solid #4a5568;
+            border-radius: 8px;
+            padding: 12px;
+            pointer-events: none;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            display: none;
+        }
+        
+        .tooltip-title {
+            font-weight: bold;
+            color: #60a5fa;
+            margin-bottom: 4px;
+        }
+        
+        .tooltip-value {
+            color: #e0e0e0;
+        }
+        
+        .legend {
+            font-size: 12px;
+        }
+        
+        .legend-title {
+            font-weight: 500;
+            fill: #e0e0e0;
+        }
+        
+        .legend-label {
+            fill: #b0b0b0;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #60a5fa;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .back-link:hover {
+            color: #93c5fd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="./index.html" class="back-link">← Back to Gallery</a>
+        <h1>US Mobile Subscribers by State</h1>
+        <p class="subtitle">Interactive choropleth map showing mobile subscriber metrics</p>
+        
+        <div class="controls">
+            <label for="metric-select">Select Metric:</label>
+            <select id="metric-select">
+                <option value="Total_Mobile_T">Total Mobile Subscribers</option>
+                <option value="Total_Pre">Total Prepaid</option>
+                <option value="Total_Post">Total Postpaid</option>
+                <option value="Verizon_T">Verizon Total</option>
+                <option value="TMobile_T">T-Mobile Total</option>
+                <option value="ATT_T">AT&T Total</option>
+            </select>
+        </div>
+        
+        <div class="map-container">
+            <svg id="map"></svg>
+        </div>
+    </div>
+    
+    <div class="tooltip" id="tooltip"></div>
+    
+    <script>
+        // Map state names to USPS two-letter codes
+        const stateNameToCode = {
+            'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR',
+            'California': 'CA', 'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE',
+            'Florida': 'FL', 'Georgia': 'GA', 'Hawaii': 'HI', 'Idaho': 'ID',
+            'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA', 'Kansas': 'KS',
+            'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
+            'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS',
+            'Missouri': 'MO', 'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV',
+            'New Hampshire': 'NH', 'New Jersey': 'NJ', 'New Mexico': 'NM', 'New York': 'NY',
+            'N. Carolina': 'NC', 'North Carolina': 'NC', 'North Dakota': 'ND',
+            'Ohio': 'OH', 'Oklahoma': 'OK', 'Oregon': 'OR', 'Pennsylvania': 'PA',
+            'Rhode Island': 'RI', 'South Carolina': 'SC', 'South Dakota': 'SD',
+            'Tennessee': 'TN', 'Texas': 'TX', 'Utah': 'UT', 'Vermont': 'VT',
+            'Virginia': 'VA', 'Washington': 'WA', 'West Virginia': 'WV',
+            'Wisconsin': 'WI', 'Wyoming': 'WY'
+        };
+        
+        // FIPS code to state abbreviation mapping
+        const fipsToAbbr = {
+            '01': 'AL', '02': 'AK', '04': 'AZ', '05': 'AR', '06': 'CA', '08': 'CO',
+            '09': 'CT', '10': 'DE', '11': 'DC', '12': 'FL', '13': 'GA', '15': 'HI',
+            '16': 'ID', '17': 'IL', '18': 'IN', '19': 'IA', '20': 'KS', '21': 'KY',
+            '22': 'LA', '23': 'ME', '24': 'MD', '25': 'MA', '26': 'MI', '27': 'MN',
+            '28': 'MS', '29': 'MO', '30': 'MT', '31': 'NE', '32': 'NV', '33': 'NH',
+            '34': 'NJ', '35': 'NM', '36': 'NY', '37': 'NC', '38': 'ND', '39': 'OH',
+            '40': 'OK', '41': 'OR', '42': 'PA', '44': 'RI', '45': 'SC', '46': 'SD',
+            '47': 'TN', '48': 'TX', '49': 'UT', '50': 'VT', '51': 'VA', '53': 'WA',
+            '54': 'WV', '55': 'WI', '56': 'WY'
+        };
+        
+        // Set up SVG dimensions
+        const width = 960;
+        const height = 600;
+        const legendHeight = 60;
+        
+        const svg = d3.select('#map')
+            .attr('width', width)
+            .attr('height', height + legendHeight);
+        
+        const mapGroup = svg.append('g');
+        const legendGroup = svg.append('g')
+            .attr('transform', `translate(100, ${height + 10})`);
+        
+        const tooltip = d3.select('#tooltip');
+        
+        // Projection for US map
+        const projection = d3.geoAlbersUsa()
+            .scale(1200)
+            .translate([width / 2, height / 2]);
+        
+        const path = d3.geoPath().projection(projection);
+        
+        let currentMetric = 'Total_Mobile_T';
+        let data = [];
+        let statesGeo = null;
+        
+        // Load data and map
+        Promise.all([
+            d3.csv('../data/mobile_subscribers.csv', d3.autoType),
+            d3.json('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json')
+        ]).then(([csvData, us]) => {
+            // Filter out "Others (Avg)" and add state codes
+            data = csvData
+                .filter(d => d.State !== 'Others (Avg)')
+                .map(d => ({
+                    ...d,
+                    stateCode: stateNameToCode[d.State]
+                }));
+            
+            // Convert TopoJSON to GeoJSON
+            statesGeo = topojson.feature(us, us.objects.states);
+            
+            // Add state codes to geo features
+            statesGeo.features.forEach(feature => {
+                feature.properties.code = fipsToAbbr[feature.id];
+            });
+            
+            // Initial render
+            updateMap();
+            
+            // Add event listener for metric selection
+            d3.select('#metric-select').on('change', function() {
+                currentMetric = this.value;
+                updateMap();
+            });
+        }).catch(error => {
+            console.error('Error loading data:', error);
+        });
+        
+        function updateMap() {
+            // Create a map from state code to data
+            const dataMap = new Map(data.map(d => [d.stateCode, d]));
+            
+            // Get metric values for color scale
+            const metricValues = data.map(d => d[currentMetric]).filter(v => v != null);
+            const maxValue = d3.max(metricValues) || 1;
+            
+            // Color scale
+            const colorScale = d3.scaleSequential()
+                .domain([0, maxValue])
+                .interpolator(d3.interpolateYlGnBu);
+            
+            // Bind data and render states
+            const states = mapGroup.selectAll('.state')
+                .data(statesGeo.features, d => d.properties.code);
+            
+            states.enter()
+                .append('path')
+                .attr('class', 'state')
+                .attr('d', path)
+                .merge(states)
+                .transition()
+                .duration(500)
+                .attr('fill', d => {
+                    const stateData = dataMap.get(d.properties.code);
+                    if (stateData && stateData[currentMetric] != null) {
+                        return colorScale(stateData[currentMetric]);
+                    }
+                    return '#374151'; // Gray for missing data
+                });
+            
+            // Add hover effects
+            mapGroup.selectAll('.state')
+                .on('mouseenter', function(event, d) {
+                    const stateData = dataMap.get(d.properties.code);
+                    if (stateData) {
+                        tooltip.style('display', 'block')
+                            .html(`
+                                <div class="tooltip-title">${stateData.State}</div>
+                                <div class="tooltip-value">
+                                    <strong>${currentMetric.replace(/_/g, ' ')}:</strong> 
+                                    ${stateData[currentMetric].toFixed(1)} M
+                                </div>
+                                <div class="tooltip-value">
+                                    <strong>Rank:</strong> #${stateData.Rank}
+                                </div>
+                            `);
+                    }
+                })
+                .on('mousemove', function(event) {
+                    tooltip
+                        .style('left', (event.pageX + 15) + 'px')
+                        .style('top', (event.pageY - 15) + 'px');
+                })
+                .on('mouseleave', function() {
+                    tooltip.style('display', 'none');
+                });
+            
+            // Update legend
+            updateLegend(colorScale, maxValue);
+        }
+        
+        function updateLegend(colorScale, maxValue) {
+            legendGroup.selectAll('*').remove();
+            
+            const legendWidth = 300;
+            const legendBarHeight = 20;
+            
+            // Add title
+            legendGroup.append('text')
+                .attr('class', 'legend-title')
+                .attr('x', legendWidth / 2)
+                .attr('y', -5)
+                .attr('text-anchor', 'middle')
+                .text(`${currentMetric.replace(/_/g, ' ')} (Millions)`);
+            
+            // Create gradient
+            const defs = svg.select('defs').empty() ? svg.append('defs') : svg.select('defs');
+            defs.selectAll('#legend-gradient').remove();
+            
+            const gradient = defs.append('linearGradient')
+                .attr('id', 'legend-gradient');
+            
+            const numStops = 10;
+            for (let i = 0; i <= numStops; i++) {
+                const offset = i / numStops;
+                const value = offset * maxValue;
+                gradient.append('stop')
+                    .attr('offset', `${offset * 100}%`)
+                    .attr('stop-color', colorScale(value));
+            }
+            
+            // Draw legend bar
+            legendGroup.append('rect')
+                .attr('width', legendWidth)
+                .attr('height', legendBarHeight)
+                .style('fill', 'url(#legend-gradient)')
+                .style('stroke', '#4a5568')
+                .style('stroke-width', 1);
+            
+            // Add scale
+            const legendScale = d3.scaleLinear()
+                .domain([0, maxValue])
+                .range([0, legendWidth]);
+            
+            const legendAxis = d3.axisBottom(legendScale)
+                .ticks(5)
+                .tickFormat(d => d.toFixed(1));
+            
+            legendGroup.append('g')
+                .attr('transform', `translate(0, ${legendBarHeight})`)
+                .call(legendAxis)
+                .selectAll('text')
+                .attr('class', 'legend-label');
+            
+            legendGroup.selectAll('.domain, .tick line')
+                .style('stroke', '#4a5568');
+        }
+    </script>
+</body>
+</html>

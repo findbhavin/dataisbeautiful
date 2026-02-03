@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>US Mobile Subscribers - Carrier Share</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #b0b0b0;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+        
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        label {
+            color: #e0e0e0;
+            font-weight: 500;
+            margin-right: 10px;
+        }
+        
+        select {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 2px solid #4a5568;
+            background: #2d3748;
+            color: #e0e0e0;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        select:hover {
+            border-color: #60a5fa;
+            background: #374151;
+        }
+        
+        select:focus {
+            outline: none;
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+        }
+        
+        .chart-container {
+            background: #1f2937;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        .summary {
+            text-align: center;
+            color: #e0e0e0;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .summary strong {
+            color: #60a5fa;
+        }
+        
+        svg {
+            display: block;
+            margin: 0 auto;
+        }
+        
+        .bar {
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        
+        .bar:hover {
+            opacity: 0.8;
+        }
+        
+        .bar-label {
+            fill: #e0e0e0;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .axis {
+            color: #b0b0b0;
+        }
+        
+        .axis path,
+        .axis line {
+            stroke: #4a5568;
+        }
+        
+        .axis text {
+            fill: #b0b0b0;
+            font-size: 12px;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: rgba(31, 41, 55, 0.95);
+            border: 1px solid #4a5568;
+            border-radius: 8px;
+            padding: 12px;
+            pointer-events: none;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            display: none;
+        }
+        
+        .tooltip-title {
+            font-weight: bold;
+            color: #60a5fa;
+            margin-bottom: 4px;
+        }
+        
+        .tooltip-value {
+            color: #e0e0e0;
+            margin-bottom: 2px;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #60a5fa;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .back-link:hover {
+            color: #93c5fd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="./index.html" class="back-link">← Back to Gallery</a>
+        <h1>Carrier Market Share by State</h1>
+        <p class="subtitle">Compare mobile carrier subscriber distribution</p>
+        
+        <div class="controls">
+            <label for="state-select">Select State:</label>
+            <select id="state-select"></select>
+        </div>
+        
+        <div class="chart-container">
+            <div class="summary" id="summary"></div>
+            <svg id="chart"></svg>
+        </div>
+    </div>
+    
+    <div class="tooltip" id="tooltip"></div>
+    
+    <script>
+        // Chart dimensions
+        const margin = { top: 40, right: 30, bottom: 60, left: 60 };
+        const width = 800 - margin.left - margin.right;
+        const height = 500 - margin.top - margin.bottom;
+        
+        // Create SVG
+        const svg = d3.select('#chart')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom);
+        
+        const chartGroup = svg.append('g')
+            .attr('transform', `translate(${margin.left}, ${margin.top})`);
+        
+        const tooltip = d3.select('#tooltip');
+        
+        // Carrier colors
+        const carrierColors = {
+            'Verizon': '#60a5fa',
+            'T-Mobile': '#34d399',
+            'AT&T': '#f97316',
+            'Others': '#e5e7eb'
+        };
+        
+        let data = [];
+        let currentState = 'California';
+        
+        // Load data
+        d3.csv('../data/mobile_subscribers.csv', d3.autoType).then(csvData => {
+            // Filter out "Others (Avg)"
+            data = csvData.filter(d => d.State !== 'Others (Avg)');
+            
+            // Populate state dropdown
+            const stateSelect = d3.select('#state-select');
+            stateSelect.selectAll('option')
+                .data(data)
+                .enter()
+                .append('option')
+                .attr('value', d => d.State)
+                .property('selected', d => d.State === 'California')
+                .text(d => d.State);
+            
+            // Initial render
+            updateChart();
+            
+            // Add event listener
+            stateSelect.on('change', function() {
+                currentState = this.value;
+                updateChart();
+            });
+        }).catch(error => {
+            console.error('Error loading data:', error);
+        });
+        
+        function updateChart() {
+            // Get current state data
+            const stateData = data.find(d => d.State === currentState);
+            if (!stateData) return;
+            
+            // Prepare carrier data
+            const carriers = [
+                { name: 'Verizon', value: stateData.Verizon_T },
+                { name: 'T-Mobile', value: stateData.TMobile_T },
+                { name: 'AT&T', value: stateData.ATT_T },
+                { name: 'Others', value: stateData.Others_T }
+            ];
+            
+            // Calculate total and shares
+            const chartTotal = d3.sum(carriers, d => d.value);
+            carriers.forEach(d => {
+                d.share = (d.value / chartTotal) * 100;
+            });
+            
+            // Update summary
+            d3.select('#summary').html(`
+                <strong>${stateData.State}:</strong> 
+                Total mobile (all carriers) = ${stateData.Total_Mobile_T.toFixed(1)} M, 
+                Rank #${stateData.Rank}, 
+                chart shows ${chartTotal.toFixed(1)} M across 4 groups.
+            `);
+            
+            // Scales
+            const xScale = d3.scaleBand()
+                .domain(carriers.map(d => d.name))
+                .range([0, width])
+                .padding(0.3);
+            
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(carriers, d => d.value) * 1.15])
+                .nice()
+                .range([height, 0]);
+            
+            // Clear previous chart
+            chartGroup.selectAll('*').remove();
+            
+            // Add axes
+            const xAxis = d3.axisBottom(xScale);
+            const yAxis = d3.axisLeft(yScale)
+                .ticks(6)
+                .tickFormat(d => `${d.toFixed(1)}M`);
+            
+            chartGroup.append('g')
+                .attr('class', 'axis')
+                .attr('transform', `translate(0, ${height})`)
+                .call(xAxis)
+                .selectAll('text')
+                .style('font-size', '13px')
+                .style('font-weight', '500');
+            
+            chartGroup.append('g')
+                .attr('class', 'axis')
+                .call(yAxis);
+            
+            // Add Y-axis label
+            chartGroup.append('text')
+                .attr('transform', 'rotate(-90)')
+                .attr('x', -height / 2)
+                .attr('y', -45)
+                .attr('text-anchor', 'middle')
+                .style('fill', '#b0b0b0')
+                .style('font-size', '13px')
+                .text('Subscribers (Millions)');
+            
+            // Add bars with animation
+            const bars = chartGroup.selectAll('.bar')
+                .data(carriers)
+                .enter()
+                .append('rect')
+                .attr('class', 'bar')
+                .attr('x', d => xScale(d.name))
+                .attr('width', xScale.bandwidth())
+                .attr('y', height)
+                .attr('height', 0)
+                .attr('fill', d => carrierColors[d.name])
+                .attr('rx', 4);
+            
+            bars.transition()
+                .duration(800)
+                .attr('y', d => yScale(d.value))
+                .attr('height', d => height - yScale(d.value));
+            
+            // Add value labels
+            const labels = chartGroup.selectAll('.bar-label')
+                .data(carriers)
+                .enter()
+                .append('text')
+                .attr('class', 'bar-label')
+                .attr('x', d => xScale(d.name) + xScale.bandwidth() / 2)
+                .attr('y', d => yScale(d.value) - 8)
+                .attr('text-anchor', 'middle')
+                .style('opacity', 0)
+                .text(d => d.value.toFixed(1));
+            
+            labels.transition()
+                .delay(800)
+                .duration(300)
+                .style('opacity', 1);
+            
+            // Add hover effects
+            bars
+                .on('mouseenter', function(event, d) {
+                    tooltip.style('display', 'block')
+                        .html(`
+                            <div class="tooltip-title">${stateData.State} - ${d.name}</div>
+                            <div class="tooltip-value">
+                                <strong>Subscribers:</strong> ${d.value.toFixed(2)} M
+                            </div>
+                            <div class="tooltip-value">
+                                <strong>Share:</strong> ${d.share.toFixed(1)}%
+                            </div>
+                        `);
+                })
+                .on('mousemove', function(event) {
+                    tooltip
+                        .style('left', (event.pageX + 15) + 'px')
+                        .style('top', (event.pageY - 15) + 'px');
+                })
+                .on('mouseleave', function() {
+                    tooltip.style('display', 'none');
+                });
+        }
+    </script>
+</body>
+</html>
