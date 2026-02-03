@@ -155,14 +155,14 @@ button:active {
 /* State styling */
 .state {
     stroke: rgba(255, 255, 255, 0.5);
-    stroke-width: 1px;
+    stroke-width: 0.3px;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .state:hover {
     stroke: var(--text-light);
-    stroke-width: 2px;
+    stroke-width: 1.5px;
     filter: brightness(1.1);
 }
 

@@ -1,6 +1,15 @@
 /**
  * MapVisual Semantic Zoom Map
  * Interactive D3.js visualization with semantic zoom capabilities
+ * 
+ * Data Source:
+ * - TopoJSON: https://d3js.org/us-10m.v1.json (uses numeric FIPS codes for state IDs)
+ * - Subscriber data: /api/mobile/data (uses ISO-2 state codes)
+ * 
+ * State Matching:
+ * - TopoJSON features have numeric FIPS codes (e.g., "06" for California)
+ * - Our data uses ISO-2 codes (e.g., "CA" for California)
+ * - We use a FIPS-to-ISO lookup table to match them
  */
 
 class MapVisualizer {
@@ -21,6 +30,22 @@ class MapVisualizer {
         
         // Color scheme for choropleth
         this.colorScheme = ['#f7fbff', '#deebf7', '#c6dbef', '#9ecae1', '#6baed6', '#4292c6', '#2171b5', '#08519c', '#08306b'];
+        
+        // FIPS to ISO-2 state code mapping
+        // Source: https://www.census.gov/library/reference/code-lists/ansi.html
+        this.fipsToIso = {
+            '01': 'AL', '02': 'AK', '04': 'AZ', '05': 'AR', '06': 'CA',
+            '08': 'CO', '09': 'CT', '10': 'DE', '11': 'DC', '12': 'FL',
+            '13': 'GA', '15': 'HI', '16': 'ID', '17': 'IL', '18': 'IN',
+            '19': 'IA', '20': 'KS', '21': 'KY', '22': 'LA', '23': 'ME',
+            '24': 'MD', '25': 'MA', '26': 'MI', '27': 'MN', '28': 'MS',
+            '29': 'MO', '30': 'MT', '31': 'NE', '32': 'NV', '33': 'NH',
+            '34': 'NJ', '35': 'NM', '36': 'NY', '37': 'NC', '38': 'ND',
+            '39': 'OH', '40': 'OK', '41': 'OR', '42': 'PA', '44': 'RI',
+            '45': 'SC', '46': 'SD', '47': 'TN', '48': 'TX', '49': 'UT',
+            '50': 'VT', '51': 'VA', '53': 'WA', '54': 'WV', '55': 'WI',
+            '56': 'WY', '72': 'PR'
+        };
     }
     
     async initialize() {
@@ -102,44 +127,50 @@ class MapVisualizer {
     
     async renderMap() {
         try {
-            // For MVP, we'll use a simple US map from a public source
-            // In production, use the TopoJSON files from /api/geo/topojson/states
-            
-            // Load US states TopoJSON from a CDN fallback or use simplified data
+            // Load US states TopoJSON from D3.js CDN
+            // This file uses numeric FIPS codes as feature.id
             const us = await d3.json('https://d3js.org/us-10m.v1.json')
-                .catch(() => {
+                .catch((err) => {
+                    console.error('Failed to load TopoJSON from CDN:', err);
                     console.log('Using fallback map data');
                     return this.createFallbackMapData();
                 });
             
+            // Validate TopoJSON structure
             if (!us || !us.objects || !us.objects.states) {
-                console.warn('Invalid map data, using fallback');
-                us = this.createFallbackMapData();
+                console.error('Invalid TopoJSON structure:', us);
+                console.warn('Expected us.objects.states to exist. Using fallback map data.');
+                this.showError('Map data is unavailable. Please refresh the page.');
+                return;
             }
             
             // Convert TopoJSON to GeoJSON
             const states = topojson.feature(us, us.objects.states);
             
+            console.log(`Loaded ${states.features.length} state features from TopoJSON`);
+            
+            // Validate that we have features
+            if (!states.features || states.features.length === 0) {
+                console.error('No state features found in TopoJSON');
+                this.showError('Map data is empty. Please refresh the page.');
+                return;
+            }
+            
             // Setup color scale based on current metric
             this.updateColorScale();
             
-            // Create state ID to data mapping
-            const dataByStateId = new Map();
-            this.data.by_state.forEach(d => {
-                if (d.state_iso && d.state_iso !== 'OTH') {
-                    dataByStateId.set(d.state_iso, d);
-                }
-            });
-            
-            // Draw states
+            // Draw states with proper data matching
             this.g.selectAll('.state')
                 .data(states.features)
                 .join('path')
                 .attr('class', 'state')
                 .attr('d', this.path)
                 .attr('fill', d => {
-                    const stateData = this.getStateDataById(d.id);
-                    if (!stateData) return '#cccccc';
+                    const stateData = this.getStateDataForFeature(d);
+                    if (!stateData) {
+                        // Use neutral fill for states without data
+                        return '#cccccc';
+                    }
                     return this.colorScale(stateData[this.currentMetric]);
                 })
                 .on('mouseover', (event, d) => this.handleMouseOver(event, d))
@@ -147,13 +178,17 @@ class MapVisualizer {
                 .on('mouseout', (event, d) => this.handleMouseOut(event, d))
                 .on('click', (event, d) => this.handleClick(event, d));
             
+            // Log matching statistics for debugging
+            const matchedStates = states.features.filter(f => this.getStateDataForFeature(f) !== null).length;
+            console.log(`Matched ${matchedStates} out of ${states.features.length} states to data`);
+            
             // Update legend
             this.updateLegend();
             
         } catch (error) {
             console.error('Error rendering map:', error);
             // Show error message
-            this.showError('Error loading map visualization');
+            this.showError('Error loading map visualization. Please refresh the page.');
         }
     }
     
@@ -171,20 +206,57 @@ class MapVisualizer {
         };
     }
     
+    getStateDataForFeature(feature) {
+        /**
+         * Match a TopoJSON feature to our subscriber data.
+         * 
+         * TopoJSON features use numeric FIPS codes (e.g., "06" for California)
+         * Our data uses ISO-2 codes (e.g., "CA" for California)
+         * 
+         * Strategy:
+         * 1. Try to get FIPS code from feature.id (numeric)
+         * 2. Convert FIPS to ISO-2 using lookup table
+         * 3. Find matching state in our data by ISO-2 code
+         * 4. Fallback to name matching if FIPS lookup fails
+         */
+        
+        // Get FIPS code from feature
+        let fipsCode = null;
+        if (feature.id !== undefined && feature.id !== null) {
+            // Convert to zero-padded string
+            fipsCode = String(feature.id).padStart(2, '0');
+        }
+        
+        // Try FIPS to ISO-2 lookup
+        if (fipsCode && this.fipsToIso[fipsCode]) {
+            const isoCode = this.fipsToIso[fipsCode];
+            const stateData = this.data.by_state.find(d => 
+                d.state_iso === isoCode && d.state_iso !== 'OTH'
+            );
+            if (stateData) {
+                return stateData;
+            }
+        }
+        
+        // Fallback: Try matching by feature.properties.name if available
+        if (feature.properties && feature.properties.name) {
+            const featureName = feature.properties.name;
+            const stateData = this.data.by_state.find(d => {
+                if (!d.state_name || d.state_iso === 'OTH') return false;
+                return d.state_name.toLowerCase() === featureName.toLowerCase();
+            });
+            if (stateData) {
+                return stateData;
+            }
+        }
+        
+        return null;
+    }
+    
     getStateDataById(stateId) {
-        // Try to match state by ID (FIPS code) or name
-        return this.data.by_state.find(d => {
-            if (!d.state_iso || d.state_iso === 'OTH') return false;
-            
-            // Try matching by FIPS code
-            if (stateId === d.state_iso) return true;
-            
-            // Try matching by state name
-            if (d.state_name && stateId && 
-                d.state_name.toLowerCase() === stateId.toLowerCase()) return true;
-            
-            return false;
-        });
+        // DEPRECATED: Use getStateDataForFeature instead
+        // This method is kept for backward compatibility but delegates to the new method
+        return this.getStateDataForFeature({ id: stateId });
     }
     
     updateColorScale() {
@@ -232,7 +304,7 @@ class MapVisualizer {
     }
     
     handleMouseOver(event, d) {
-        const stateData = this.getStateDataById(d.id);
+        const stateData = this.getStateDataForFeature(d);
         if (!stateData) return;
         
         d3.select(event.currentTarget)
@@ -257,7 +329,7 @@ class MapVisualizer {
     }
     
     handleClick(event, d) {
-        const stateData = this.getStateDataById(d.id);
+        const stateData = this.getStateDataForFeature(d);
         if (!stateData) return;
         
         console.log('Clicked state:', stateData.state_name, stateData);
@@ -332,7 +404,7 @@ class MapVisualizer {
             .transition()
             .duration(750)
             .attr('fill', d => {
-                const stateData = this.getStateDataById(d.id);
+                const stateData = this.getStateDataForFeature(d);
                 if (!stateData) return '#cccccc';
                 return this.colorScale(stateData[this.currentMetric]);
             });
