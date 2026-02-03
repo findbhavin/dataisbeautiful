@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Subscribers - US Map Visualizations</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 15px;
+            font-size: 2.5em;
+            font-weight: 600;
+        }
+        
+        .intro {
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto 50px;
+            color: #b0b0b0;
+            line-height: 1.8;
+            font-size: 1.05em;
+        }
+        
+        .intro a {
+            color: #60a5fa;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .intro a:hover {
+            color: #93c5fd;
+            text-decoration: underline;
+        }
+        
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+        
+        .card {
+            background: #1f2937;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid transparent;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7);
+            border-color: #60a5fa;
+        }
+        
+        .card-icon {
+            font-size: 3em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .card h2 {
+            color: #fff;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+            text-align: center;
+        }
+        
+        .card p {
+            color: #b0b0b0;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .card-link {
+            display: block;
+            text-align: center;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin: 0 auto;
+            max-width: 200px;
+        }
+        
+        .card-link:hover {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        
+        .features {
+            background: #1f2937;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 15px;
+            border-left: 4px solid #60a5fa;
+        }
+        
+        .features h3 {
+            color: #60a5fa;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .features ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .features li {
+            color: #b0b0b0;
+            padding: 5px 0;
+            font-size: 0.9em;
+        }
+        
+        .features li:before {
+            content: "✓ ";
+            color: #34d399;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 1px solid #374151;
+            color: #6b7280;
+            font-size: 0.9em;
+        }
+        
+        footer a {
+            color: #60a5fa;
+            text-decoration: none;
+        }
+        
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Mobile Subscribers – US Map Visualizations</h1>
+        
+        <div class="intro">
+            <p>
+                Explore interactive visualizations of mobile subscriber data across the United States. 
+                The data, sourced from <code>data/mobile_subscribers.csv</code>, includes metrics for 
+                major carriers (Verizon, T-Mobile, AT&amp;T) and their prepaid/postpaid breakdowns 
+                across 32 states plus aggregated data.
+            </p>
+        </div>
+        
+        <div class="gallery">
+            <div class="card">
+                <div class="card-icon">🗺️</div>
+                <h2>Choropleth Map</h2>
+                <p>
+                    Interactive US state map with color-coded metrics. Choose from multiple data 
+                    dimensions including total subscribers, prepaid/postpaid splits, and carrier-specific 
+                    totals. Hover over states for detailed information.
+                </p>
+                <div class="features">
+                    <h3>Features</h3>
+                    <ul>
+                        <li>Switch between 6 different metrics</li>
+                        <li>Color-coded by subscriber density</li>
+                        <li>Interactive tooltips with state details</li>
+                        <li>Gradient legend for easy interpretation</li>
+                    </ul>
+                </div>
+                <a href="./choropleth.html" class="card-link">View Map →</a>
+            </div>
+            
+            <div class="card">
+                <div class="card-icon">📊</div>
+                <h2>Carrier Share Bars</h2>
+                <p>
+                    Compare market share across the four major carrier groups on a per-state basis. 
+                    Select any state to see the breakdown of subscribers by carrier with exact values 
+                    and percentage shares.
+                </p>
+                <div class="features">
+                    <h3>Features</h3>
+                    <ul>
+                        <li>Select from 32 US states</li>
+                        <li>Animated bar chart transitions</li>
+                        <li>Detailed tooltips with share percentages</li>
+                        <li>Summary statistics per state</li>
+                    </ul>
+                </div>
+                <a href="./carrier_share_bars.html" class="card-link">View Chart →</a>
+            </div>
+        </div>
+        
+        <footer>
+            <p>
+                Data visualization gallery for 
+                <a href="https://github.com/findbhavin/dataisbeautiful" target="_blank">findbhavin/dataisbeautiful</a>
+                <br>
+                Built with D3.js • TopoJSON • Pure HTML/CSS/JS
+            </p>
+        </footer>
+    </div>
+</body>
+</html>
