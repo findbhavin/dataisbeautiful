@@ -85,11 +85,26 @@
         </div>
     </div>
     
-    <!-- D3.js Library -->
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://d3js.org/topojson.v3.min.js"></script>
+    <!-- D3.js Library - Using unpkg CDN as fallback -->
+    <script src="https://unpkg.com/d3@7/dist/d3.min.js" onerror="console.error('D3.js failed to load')"></script>
+    <script src="https://unpkg.com/topojson@3/dist/topojson.min.js" onerror="console.error('TopoJSON failed to load')"></script>
+    
+    <!-- Fallback visualization -->
+    <script src="/static/js/fallback_viz.js"></script>
     
     <!-- Map Visualization Script -->
     <script src="/static/js/map_semantic_zoom.js"></script>
+    
+    <!-- Fallback message if libraries don't load -->
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                if (typeof d3 === 'undefined') {
+                    console.error('D3.js is not available, using fallback visualization');
+                    createFallbackVisualization();
+                }
+            }, 2000);
+        });
+    </script>
 </body>
 </html>
