@@ -114,6 +114,32 @@ Successfully implemented the MapVisual Sophisticated Visualization Engine MVP, t
 - **Metrics**: 7 available metrics (total, prepaid, postpaid, 3 carriers)
 - **Total Coverage**: 298.3M subscribers across 32 states
 
+### Map Data Sourcing and Matching
+
+The choropleth map visualization uses the following data flow:
+
+1. **TopoJSON Source**: `https://d3js.org/us-10m.v1.json`
+   - Industry-standard US state boundaries
+   - Features use numeric FIPS codes (e.g., "06" for California)
+   - Loaded via D3.js from public CDN
+
+2. **Subscriber Data**: `/api/mobile/data`
+   - Backend provides ISO-2 state codes (e.g., "CA" for California)
+   - Includes full carrier breakdown and metrics
+
+3. **State Matching Strategy**:
+   - Frontend maintains FIPS-to-ISO lookup table (50 states + DC + PR)
+   - `getStateDataForFeature()` maps TopoJSON features to subscriber data
+   - Primary match: FIPS code → ISO-2 code → subscriber data
+   - Fallback: Feature name → state name (case-insensitive)
+   - Unmatched states use neutral grey fill (#cccccc)
+
+4. **Troubleshooting**:
+   - Check browser console for "Matched X out of Y states" message
+   - Verify `/api/mobile/data` returns state_iso codes
+   - Ensure TopoJSON loads successfully (HTTP 200 from d3js.org)
+   - If map shows grey diagonal lines, likely a FIPS/ISO mismatch
+
 ## Testing Results
 
 ### ✅ API Testing
