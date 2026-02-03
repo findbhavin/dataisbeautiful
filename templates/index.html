@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MapVisual - US Mobile Subscribers Visualization</title>
+    
+    <!-- Glassmorphism CSS -->
+    <link rel="stylesheet" href="/static/css/glassmorphism.css">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1>MapVisual Engine</h1>
+        <p>Interactive US Mobile Subscribers Visualization</p>
+    </div>
+    
+    <!-- Stats Panel -->
+    <div class="stats-panel">
+        <div class="glass-container stats-grid fade-in">
+            <div class="stat-card">
+                <div class="stat-value" id="stat-total">-</div>
+                <div class="stat-label">Total Subscribers</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-states">-</div>
+                <div class="stat-label">States Covered</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">3</div>
+                <div class="stat-label">Major Carriers</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Controls Section -->
+    <div class="controls-section">
+        <div class="glass-container controls-grid fade-in">
+            <div class="control-group">
+                <label class="control-label" for="metric-select">Select Metric</label>
+                <select id="metric-select">
+                    <option value="total_subscribers">Total Subscribers</option>
+                    <option value="total_prepaid">Prepaid Subscribers</option>
+                    <option value="total_postpaid">Postpaid Subscribers</option>
+                    <option value="verizon_total">Verizon Subscribers</option>
+                    <option value="tmobile_total">T-Mobile Subscribers</option>
+                    <option value="att_total">AT&T Subscribers</option>
+                    <option value="others_total">Other Carriers</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label class="control-label">Map Controls</label>
+                <button id="reset-zoom">Reset Zoom</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Map Container -->
+    <div class="map-container">
+        <div class="glass-container fade-in">
+            <div id="map-svg-container">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <span>Loading visualization...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Legend -->
+    <div class="legend">
+        <div class="glass-panel fade-in">
+            <div class="legend-title">Color Scale</div>
+            <div class="legend-scale" id="legend-scale"></div>
+            <div class="legend-labels">
+                <span id="legend-min">Min</span>
+                <span id="legend-max">Max</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- D3.js Library -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/topojson.v3.min.js"></script>
+    
+    <!-- Map Visualization Script -->
+    <script src="/static/js/map_semantic_zoom.js"></script>
+</body>
+</html>
