@@ -128,7 +128,7 @@ The choropleth map visualization uses the following data flow:
    - Includes full carrier breakdown and metrics
 
 3. **State Matching Strategy**:
-   - Frontend maintains FIPS-to-ISO lookup table (51 states + DC)
+   - Frontend maintains FIPS-to-ISO lookup table (50 states + DC + PR)
    - `getStateDataForFeature()` maps TopoJSON features to subscriber data
    - Primary match: FIPS code → ISO-2 code → subscriber data
    - Fallback: Feature name → state name (case-insensitive)
