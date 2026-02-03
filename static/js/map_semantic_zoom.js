@@ -291,10 +291,18 @@ class MapVisualizer {
     }
     
     formatValue(value) {
-        if (value >= 1) {
+        // Values are in millions (M), format appropriately
+        if (value >= 1000) {
+            // Convert to billions
+            return `${(value / 1000).toFixed(2)}B`;
+        } else if (value >= 1) {
+            // Show as millions
             return `${value.toFixed(1)}M`;
+        } else if (value > 0) {
+            // Show as thousands for values < 1M
+            return `${(value * 1000).toFixed(0)}K`;
         }
-        return `${(value * 1000).toFixed(0)}K`;
+        return '0';
     }
     
     updateStats() {

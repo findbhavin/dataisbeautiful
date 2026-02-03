@@ -51,10 +51,17 @@ function createFallbackVisualization() {
             
             container.innerHTML = html;
             
-            // Update stats
-            const totalMillions = states.reduce((sum, s) => sum + s.total_subscribers, 0);
-            document.getElementById('stat-total').textContent = totalMillions.toFixed(1) + 'M';
-            document.getElementById('stat-states').textContent = states.length;
+            // Update stats - check if elements exist first
+            const totalElement = document.getElementById('stat-total');
+            const statesElement = document.getElementById('stat-states');
+            
+            if (totalElement) {
+                totalElement.textContent = totalMillions.toFixed(1) + 'M';
+            }
+            
+            if (statesElement) {
+                statesElement.textContent = states.length;
+            }
         })
         .catch(error => {
             console.error('Error loading data:', error);

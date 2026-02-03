@@ -1,4 +1,5 @@
 {
+  "_comment": "This is a placeholder TopoJSON structure for US states. In production, replace with actual topology data from https://github.com/topojson/us-atlas or similar source. The current structure has empty arcs and will not render actual state boundaries.",
   "type": "Topology",
   "objects": {
     "states": {
