@@ -1,0 +1,11 @@
+{
+  "type": "Topology",
+  "objects": {
+    "counties": {
+      "type": "GeometryCollection",
+      "geometries": []
+    }
+  },
+  "arcs": [],
+  "bbox": [-179.14734, 18.91619, -66.96466, 71.35776]
+}

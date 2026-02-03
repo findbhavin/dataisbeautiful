@@ -1,0 +1,640 @@
+{
+  "_comment": "This is a placeholder TopoJSON structure for US states. In production, replace with actual topology data from https://github.com/topojson/us-atlas or similar source. The current structure has empty arcs and will not render actual state boundaries.",
+  "type": "Topology",
+  "objects": {
+    "states": {
+      "type": "GeometryCollection",
+      "geometries": [
+        {
+          "type": "Polygon",
+          "id": "01",
+          "properties": {
+            "name": "Alabama"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "02",
+          "properties": {
+            "name": "Alaska"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "04",
+          "properties": {
+            "name": "Arizona"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "05",
+          "properties": {
+            "name": "Arkansas"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "06",
+          "properties": {
+            "name": "California"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "08",
+          "properties": {
+            "name": "Colorado"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "09",
+          "properties": {
+            "name": "Connecticut"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "10",
+          "properties": {
+            "name": "Delaware"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "11",
+          "properties": {
+            "name": "District of Columbia"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "12",
+          "properties": {
+            "name": "Florida"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "13",
+          "properties": {
+            "name": "Georgia"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "15",
+          "properties": {
+            "name": "Hawaii"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "16",
+          "properties": {
+            "name": "Idaho"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "17",
+          "properties": {
+            "name": "Illinois"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "18",
+          "properties": {
+            "name": "Indiana"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "19",
+          "properties": {
+            "name": "Iowa"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "20",
+          "properties": {
+            "name": "Kansas"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "21",
+          "properties": {
+            "name": "Kentucky"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "22",
+          "properties": {
+            "name": "Louisiana"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "23",
+          "properties": {
+            "name": "Maine"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "24",
+          "properties": {
+            "name": "Maryland"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "25",
+          "properties": {
+            "name": "Massachusetts"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "26",
+          "properties": {
+            "name": "Michigan"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "27",
+          "properties": {
+            "name": "Minnesota"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "28",
+          "properties": {
+            "name": "Mississippi"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "29",
+          "properties": {
+            "name": "Missouri"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "30",
+          "properties": {
+            "name": "Montana"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "31",
+          "properties": {
+            "name": "Nebraska"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "32",
+          "properties": {
+            "name": "Nevada"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "33",
+          "properties": {
+            "name": "New Hampshire"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "34",
+          "properties": {
+            "name": "New Jersey"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "35",
+          "properties": {
+            "name": "New Mexico"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "36",
+          "properties": {
+            "name": "New York"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "37",
+          "properties": {
+            "name": "North Carolina"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "38",
+          "properties": {
+            "name": "North Dakota"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "39",
+          "properties": {
+            "name": "Ohio"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "40",
+          "properties": {
+            "name": "Oklahoma"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "41",
+          "properties": {
+            "name": "Oregon"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "42",
+          "properties": {
+            "name": "Pennsylvania"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "44",
+          "properties": {
+            "name": "Rhode Island"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "45",
+          "properties": {
+            "name": "South Carolina"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "46",
+          "properties": {
+            "name": "South Dakota"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "47",
+          "properties": {
+            "name": "Tennessee"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "48",
+          "properties": {
+            "name": "Texas"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "49",
+          "properties": {
+            "name": "Utah"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "50",
+          "properties": {
+            "name": "Vermont"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "51",
+          "properties": {
+            "name": "Virginia"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "53",
+          "properties": {
+            "name": "Washington"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "54",
+          "properties": {
+            "name": "West Virginia"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "55",
+          "properties": {
+            "name": "Wisconsin"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "type": "Polygon",
+          "id": "56",
+          "properties": {
+            "name": "Wyoming"
+          },
+          "arcs": [
+            [
+              0
+            ]
+          ]
+        }
+      ]
+    }
+  },
+  "arcs": [],
+  "bbox": [
+    -179.14734,
+    18.91619,
+    -66.96466,
+    71.35776
+  ],
+  "transform": {
+    "scale": [
+      0.0011214497449744975,
+      0.0005244157415741574
+    ],
+    "translate": [
+      -179.14734,
+      18.91619
+    ]
+  }
+}
