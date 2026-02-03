@@ -101,7 +101,7 @@ All visualizations load data from `data/mobile_subscribers.csv`, which contains:
 ### Technology Stack
 
 **MapVisual Engine:**
-- **Backend**: FastAPI (Python 3.9)
+- **Backend**: FastAPI (Python 3.10)
 - **Frontend**: D3.js v7 with semantic zoom
 - **Styling**: Glassmorphism CSS
 - **Containerization**: Multi-stage Docker build

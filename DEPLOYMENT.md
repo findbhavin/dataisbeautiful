@@ -6,7 +6,7 @@ MapVisual is a FastAPI-based web application that provides interactive visualiza
 
 ## Architecture
 
-- **Backend**: FastAPI (Python 3.9)
+- **Backend**: FastAPI (Python 3.10)
 - **Frontend**: D3.js (semantic zoom map) with fallback table visualization
 - **Containerization**: Docker (multi-stage build)
 - **Deployment Target**: Google Cloud Run (port 8080)
@@ -48,7 +48,7 @@ MapVisual is a FastAPI-based web application that provides interactive visualiza
 
 ### Prerequisites
 
-- Python 3.9+
+- Python 3.10+
 - pip
 
 ### Installation
@@ -227,7 +227,7 @@ The application expects `data/mobile_subscribers.csv` with the following columns
 ## Performance
 
 - **Multi-stage Docker Build**: Optimized image size (~200MB)
-- **Python 3.9 Slim**: Minimal base image
+- **Python 3.10 Slim**: Minimal base image
 - **Async API**: Non-blocking request handling
 - **Static File Serving**: Efficient delivery of assets
 

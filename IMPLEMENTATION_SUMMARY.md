@@ -61,7 +61,7 @@ Successfully implemented the MapVisual Sophisticated Visualization Engine MVP, t
 
 1. **Docker Configuration**
    - Multi-stage build for optimized image size
-   - Python 3.9-slim base image
+   - Python 3.10-slim base image
    - Port 8080 for Google Cloud Run compatibility
    - Health check configuration
 
@@ -87,7 +87,7 @@ Successfully implemented the MapVisual Sophisticated Visualization Engine MVP, t
 ## Technical Specifications
 
 ### Architecture
-- **Backend**: FastAPI (Python 3.9)
+- **Backend**: FastAPI (Python 3.10)
 - **Frontend**: D3.js v7 with semantic zoom
 - **Styling**: Glassmorphism CSS
 - **Data Processing**: Pandas
