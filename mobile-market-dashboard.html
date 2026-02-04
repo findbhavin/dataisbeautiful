@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Market Dashboard</title>
+    
+    <!-- 
+        Mobile Market Dashboard - Standalone HTML Visualization
+        
+        This page visualizes US mobile carrier market data using Google Charts.
+        It can be opened directly in a browser or hosted via GitHub Pages.
+        No API key is required as it uses Google Charts library (not Google Maps).
+        
+        Features:
+        - GeoChart showing US states with color-coded carrier data
+        - Table view with detailed subscriber numbers
+        - Four metric buttons to switch between Total, Verizon, T-Mobile, and AT&T
+        - Responsive design with clean layout
+    -->
+    
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .controls button {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border: 2px solid #3498db;
+            background: white;
+            color: #3498db;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .controls button:hover {
+            background: #3498db;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+        }
+        
+        .controls button.active {
+            background: #2980b9;
+            color: white;
+            border-color: #2980b9;
+        }
+        
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        @media (max-width: 968px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .viz-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .viz-panel h2 {
+            color: #34495e;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        #map_div {
+            width: 100%;
+            height: 450px;
+        }
+        
+        #table_div {
+            width: 100%;
+            height: 500px;
+            overflow: auto;
+        }
+        
+        #others-box {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 15px 20px;
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            color: #856404;
+            font-weight: 500;
+            text-align: center;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Mobile Market Dashboard</h1>
+        <div class="controls">
+            <button id="btn-t" class="active" onclick="updateDashboard('t')">Total Subscribers</button>
+            <button id="btn-v" onclick="updateDashboard('v')">Verizon</button>
+            <button id="btn-tmb" onclick="updateDashboard('tmb')">T-Mobile</button>
+            <button id="btn-att" onclick="updateDashboard('att')">AT&amp;T</button>
+        </div>
+    </div>
+    
+    <div class="dashboard">
+        <div class="viz-panel">
+            <h2>US State Map</h2>
+            <div id="map_div" class="loading">Loading map...</div>
+        </div>
+        <div class="viz-panel">
+            <h2>Detailed Data</h2>
+            <div id="table_div" class="loading">Loading table...</div>
+        </div>
+    </div>
+    
+    <div id="others-box" style="display: none;"></div>
+    
+    <script type="text/javascript">
+        // Carrier data array with US states and Others aggregate
+        const carrierData = [
+            { id: "CA", s: "California", t: 38.6, pre: 7.7, post: 30.9, v: 11.2, tmb: 15.4, att: 10.8 },
+            { id: "TX", s: "Texas", t: 29.8, pre: 6.3, post: 23.5, v: 9.5, tmb: 9.2, att: 10.4 },
+            { id: "FL", s: "Florida", t: 22.1, pre: 5.1, post: 17, v: 7.3, tmb: 7.5, att: 6.8 },
+            { id: "NY", s: "New York", t: 19.3, pre: 3.5, post: 15.8, v: 7.9, tmb: 6.4, att: 4.6 },
+            { id: "PA", s: "Pennsylvania", t: 12.8, pre: 2.3, post: 10.5, v: 4.9, tmb: 4.1, att: 3.5 },
+            { id: "IL", s: "Illinois", t: 12.4, pre: 2.4, post: 10, v: 4.3, tmb: 4.1, att: 3.7 },
+            { id: "OH", s: "Ohio", t: 11.6, pre: 2.3, post: 9.3, v: 4.2, tmb: 3.9, att: 3.2 },
+            { id: "GA", s: "Georgia", t: 10.8, pre: 2.5, post: 8.3, v: 3.1, tmb: 3.6, att: 3.9 },
+            { id: "NC", s: "N. Carolina", t: 10.6, pre: 2.1, post: 8.5, v: 3.4, tmb: 3.5, att: 3.5 },
+            { id: "MI", s: "Michigan", t: 10, pre: 1.9, post: 8.1, v: 3.8, tmb: 3.2, att: 2.8 },
+            { id: "NJ", s: "New Jersey", t: 9.2, pre: 1.5, post: 7.7, v: 4, tmb: 3.1, att: 1.9 },
+            { id: "VA", s: "Virginia", t: 8.6, pre: 1.5, post: 7.1, v: 3.2, tmb: 2.8, att: 2.4 },
+            { id: "WA", s: "Washington", t: 7.7, pre: 1.3, post: 6.4, v: 2.2, tmb: 3.3, att: 2 },
+            { id: "AZ", s: "Arizona", t: 7.2, pre: 1.6, post: 5.6, v: 2.3, tmb: 2.9, att: 1.8 },
+            { id: "MA", s: "Massachusetts", t: 6.9, pre: 1.1, post: 5.8, v: 3, tmb: 2.3, att: 1.4 },
+            { id: "TN", s: "Tennessee", t: 6.9, pre: 1.5, post: 5.4, v: 2.2, tmb: 2.3, att: 2.2 },
+            { id: "IN", s: "Indiana", t: 6.7, pre: 1.3, post: 5.4, v: 2.5, tmb: 2.1, att: 1.9 },
+            { id: "MO", s: "Missouri", t: 6.1, pre: 1.2, post: 4.9, v: 2.1, tmb: 2, att: 1.8 },
+            { id: "MD", s: "Maryland", t: 6, pre: 1, post: 5, v: 2.2, tmb: 2.1, att: 1.5 },
+            { id: "WI", s: "Wisconsin", t: 5.8, pre: 1.1, post: 4.7, v: 1.9, tmb: 2.4, att: 1.3 },
+            { id: "CO", s: "Colorado", t: 5.7, pre: 1.2, post: 4.5, v: 1.8, tmb: 2.2, att: 1.5 },
+            { id: "MN", s: "Minnesota", t: 5.6, pre: 0.9, post: 4.7, v: 2.1, tmb: 1.9, att: 1.4 },
+            { id: "AL", s: "Alabama", t: 5, pre: 1.2, post: 3.8, v: 1.5, tmb: 1.4, att: 2 },
+            { id: "LA", s: "Louisiana", t: 4.5, pre: 1.1, post: 3.4, v: 1.3, tmb: 1.4, att: 1.7 },
+            { id: "KY", s: "Kentucky", t: 4.4, pre: 1, post: 3.4, v: 1.5, tmb: 1.3, att: 1.5 },
+            { id: "OR", s: "Oregon", t: 4.2, pre: 0.8, post: 3.4, v: 1.2, tmb: 1.8, att: 1.1 },
+            { id: "OK", s: "Oklahoma", t: 3.9, pre: 0.9, post: 3, v: 1.2, tmb: 1.3, att: 1.3 },
+            { id: "CT", s: "Connecticut", t: 3.5, pre: 0.6, post: 2.9, v: 1.4, tmb: 1.2, att: 0.8 },
+            { id: "UT", s: "Utah", t: 3.3, pre: 0.7, post: 2.6, v: 1, tmb: 1.3, att: 0.9 },
+            { id: "IA", s: "Iowa", t: 3.1, pre: 0.6, post: 2.5, v: 1.1, tmb: 1.3, att: 0.6 },
+            { id: "NV", s: "Nevada", t: 3.1, pre: 0.8, post: 2.3, v: 0.9, tmb: 1.4, att: 0.7 },
+            { id: "KS", s: "Kansas", t: 2.9, pre: 0.6, post: 2.3, v: 1, tmb: 1, att: 0.8 },
+            { id: "Others", s: "Others (Avg)", t: 52.1, pre: 10.4, post: 41.7, v: 15.5, tmb: 18.9, att: 16.4 }
+        ];
+        
+        let currentMetric = 't';
+        let mapChart = null;
+        let tableChart = null;
+        
+        // Load Google Charts
+        google.charts.load('current', { 
+            'packages': ['geochart', 'table'] 
+        });
+        
+        // Set callback to initialize dashboard once loaded
+        google.charts.setOnLoadCallback(function() { 
+            updateDashboard('t'); 
+        });
+        
+        // Update dashboard based on selected metric
+        function updateDashboard(key) {
+            // Defensive check for DOM elements
+            const mapDiv = document.getElementById('map_div');
+            const tableDiv = document.getElementById('table_div');
+            const othersBox = document.getElementById('others-box');
+            
+            if (!mapDiv || !tableDiv || !othersBox) {
+                console.error('Required DOM elements not found');
+                return;
+            }
+            
+            currentMetric = key;
+            
+            // Update button states
+            const buttons = {
+                't': 'btn-t',
+                'v': 'btn-v',
+                'tmb': 'btn-tmb',
+                'att': 'btn-att'
+            };
+            
+            // Remove active class from all buttons
+            Object.values(buttons).forEach(btnId => {
+                const btn = document.getElementById(btnId);
+                if (btn) {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            // Add active class to current button
+            const activeBtn = document.getElementById(buttons[key]);
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+            }
+            
+            // Prepare data for GeoChart
+            const geoData = [['State', 'Subscribers (M)']];
+            
+            // Prepare data for Table
+            const tableData = new google.visualization.DataTable();
+            tableData.addColumn('string', 'State');
+            tableData.addColumn('number', 'Value (M)');
+            
+            let othersValue = null;
+            let othersState = null;
+            
+            // Process carrier data
+            carrierData.forEach(item => {
+                const value = item[key];
+                
+                if (item.id === 'Others') {
+                    // Handle "Others" separately
+                    othersValue = value;
+                    othersState = item.s;
+                } else {
+                    // Add to GeoChart with US- prefix for region code
+                    const regionCode = 'US-' + item.id;
+                    const label = item.s + ': ' + value + 'M';
+                    geoData.push([{v: regionCode, f: label}, value]);
+                    
+                    // Add to table
+                    tableData.addRow([item.s, value]);
+                }
+            });
+            
+            // Update Others box
+            if (othersValue !== null && othersState !== null) {
+                othersBox.textContent = othersState + ': ' + othersValue + 'M subscribers';
+                othersBox.style.display = 'block';
+            } else {
+                othersBox.style.display = 'none';
+            }
+            
+            // Draw GeoChart
+            try {
+                const geoChartData = google.visualization.arrayToDataTable(geoData);
+                
+                if (!mapChart) {
+                    mapChart = new google.visualization.GeoChart(mapDiv);
+                }
+                
+                const geoOptions = {
+                    region: 'US',
+                    resolution: 'provinces',
+                    displayMode: 'regions',
+                    colorAxis: { 
+                        colors: ['#e8f0fe', '#1a73e8', '#174ea6'] 
+                    },
+                    backgroundColor: '#ffffff',
+                    datalessRegionColor: '#f1f3f4',
+                    width: '100%',
+                    height: 450
+                };
+                
+                mapChart.draw(geoChartData, geoOptions);
+            } catch (error) {
+                console.error('Error drawing GeoChart:', error);
+                mapDiv.innerHTML = '<p style="color: red; padding: 20px;">Error loading map visualization</p>';
+            }
+            
+            // Draw Table
+            try {
+                if (!tableChart) {
+                    tableChart = new google.visualization.Table(tableDiv);
+                }
+                
+                const tableOptions = {
+                    width: '100%',
+                    height: '500px',
+                    sortColumn: 1,
+                    sortAscending: false
+                };
+                
+                tableChart.draw(tableData, tableOptions);
+            } catch (error) {
+                console.error('Error drawing Table:', error);
+                tableDiv.innerHTML = '<p style="color: red; padding: 20px;">Error loading table visualization</p>';
+            }
+        }
+    </script>
+</body>
+</html>

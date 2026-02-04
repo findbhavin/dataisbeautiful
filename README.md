@@ -76,6 +76,15 @@ Interactive maps and charts visualizing US mobile subscriber data across states 
 
 ### Available Visualizations
 
+#### 📱 Mobile Market Dashboard (`mobile-market-dashboard.html`)
+**NEW:** Standalone Google Charts-based dashboard with GeoChart and Table views:
+- Interactive US state GeoChart showing carrier market data with color gradient
+- Sortable table view with detailed subscriber numbers
+- Four metric buttons: Total Subscribers, Verizon, T-Mobile, and AT&T
+- Pure client-side HTML+JS - no backend required
+- Can be opened directly in browser or hosted via GitHub Pages
+- No API key required (uses Google Charts library, not Google Maps)
+
 #### 🗺️ Choropleth Map (`maps/choropleth.html`)
 Interactive US state map with color-coded metrics:
 - Switch between 6 different metrics (Total subscribers, Prepaid, Postpaid, Verizon, T-Mobile, AT&T)
