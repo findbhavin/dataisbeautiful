@@ -28,6 +28,10 @@ class MapVisualizer {
         this.width = 960;
         this.height = 600;
         
+        // Constants for label rendering
+        this.BASE_LABEL_FONT_SIZE = 12;  // Base font size for state labels
+        this.OTHERS_AVG_STATE_ISO = 'OTH';  // ISO code for "Others (Avg)" to exclude from map
+        
         // Color scheme for choropleth
         this.colorScheme = ['#f7fbff', '#deebf7', '#c6dbef', '#9ecae1', '#6baed6', '#4292c6', '#2171b5', '#08519c', '#08306b'];
         
@@ -114,7 +118,7 @@ class MapVisualizer {
                 // Also update visibility based on zoom level
                 const scale = event.transform.k;
                 this.g.selectAll('.state-label')
-                    .style('font-size', `${12 / Math.sqrt(scale)}px`)
+                    .style('font-size', `${this.BASE_LABEL_FONT_SIZE / Math.sqrt(scale)}px`)
                     .style('opacity', scale < 2 ? 1 : 0.8);
             });
         
@@ -241,7 +245,7 @@ class MapVisualizer {
         if (fipsCode && this.fipsToIso[fipsCode]) {
             const isoCode = this.fipsToIso[fipsCode];
             const stateData = this.data.by_state.find(d => 
-                d.state_iso === isoCode && d.state_iso !== 'OTH'
+                d.state_iso === isoCode && d.state_iso !== this.OTHERS_AVG_STATE_ISO
             );
             if (stateData) {
                 return stateData;
@@ -274,7 +278,7 @@ class MapVisualizer {
         this.g.selectAll('.state-label').remove();
         
         // Get state data excluding "Others (Avg)"
-        const stateData = this.data.by_state.filter(d => d.state_iso !== 'OTH');
+        const stateData = this.data.by_state.filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO);
         
         // Add labels for each state using lat/long coordinates
         const labels = this.g.selectAll('.state-label')
@@ -292,7 +296,7 @@ class MapVisualizer {
             })
             .attr('text-anchor', 'middle')
             .attr('dominant-baseline', 'middle')
-            .style('font-size', '12px')
+            .style('font-size', `${this.BASE_LABEL_FONT_SIZE}px`)
             .style('font-weight', 'bold')
             .style('fill', '#1a1a1a')
             .style('stroke', '#ffffff')
@@ -331,7 +335,7 @@ class MapVisualizer {
     
     updateColorScale() {
         const values = this.data.by_state
-            .filter(d => d.state_iso !== 'OTH')
+            .filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO)
             .map(d => d[this.currentMetric]);
         
         const extent = d3.extent(values);
@@ -360,7 +364,7 @@ class MapVisualizer {
         
         // Update legend labels
         const values = this.data.by_state
-            .filter(d => d.state_iso !== 'OTH')
+            .filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO)
             .map(d => d[this.currentMetric]);
         
         const extent = d3.extent(values);
@@ -460,7 +464,7 @@ class MapVisualizer {
         const totalElement = d3.select('#stat-total');
         if (!totalElement.empty()) {
             const totalMillions = this.data.by_state
-                .filter(d => d.state_iso !== 'OTH')
+                .filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO)
                 .reduce((sum, d) => sum + d.total_subscribers, 0);
             totalElement.text(`${totalMillions.toFixed(1)}M`);
         }
@@ -468,7 +472,7 @@ class MapVisualizer {
         // Update number of states
         const statesElement = d3.select('#stat-states');
         if (!statesElement.empty()) {
-            const stateCount = this.data.by_state.filter(d => d.state_iso !== 'OTH').length;
+            const stateCount = this.data.by_state.filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO).length;
             statesElement.text(stateCount);
         }
     }
