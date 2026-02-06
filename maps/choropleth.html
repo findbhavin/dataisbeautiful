@@ -144,6 +144,10 @@
         .back-link:hover {
             color: #93c5fd;
         }
+        
+        .state-label {
+            user-select: none;
+        }
     </style>
 </head>
 <body>
@@ -155,12 +159,21 @@
         <div class="controls">
             <label for="metric-select">Select Metric:</label>
             <select id="metric-select">
-                <option value="Total_Mobile_T">Total Mobile Subscribers</option>
-                <option value="Total_Pre">Total Prepaid</option>
-                <option value="Total_Post">Total Postpaid</option>
-                <option value="Verizon_T">Verizon Total</option>
-                <option value="TMobile_T">T-Mobile Total</option>
-                <option value="ATT_T">AT&T Total</option>
+                <option value="Total Mobile (T)">Total Mobile (T)</option>
+                <option value="Total (Pre)">Total (Pre)</option>
+                <option value="Total (Post)">Total (Post)</option>
+                <option value="Verizon (T)">Verizon (T)</option>
+                <option value="Verizon (Pre)">Verizon (Pre)</option>
+                <option value="Verizon (Post)">Verizon (Post)</option>
+                <option value="T-Mobile (T)">T-Mobile (T)</option>
+                <option value="T-Mobile (Pre)">T-Mobile (Pre)</option>
+                <option value="T-Mobile (Post)">T-Mobile (Post)</option>
+                <option value="AT&T (T)">AT&amp;T (T)</option>
+                <option value="AT&T (Pre)">AT&amp;T (Pre)</option>
+                <option value="AT&T (Post)">AT&amp;T (Post)</option>
+                <option value="Others (T)">Others (T)</option>
+                <option value="Others (Pre)">Others (Pre)</option>
+                <option value="Others (Post)">Others (Post)</option>
             </select>
         </div>
         
@@ -225,7 +238,7 @@
         
         const path = d3.geoPath().projection(projection);
         
-        let currentMetric = 'Total_Mobile_T';
+        let currentMetric = 'Total Mobile (T)';
         let data = [];
         let statesGeo = null;
         
@@ -319,6 +332,42 @@
                 })
                 .on('mouseleave', function() {
                     tooltip.style('display', 'none');
+                });
+            
+            // Render state labels using lat/long coordinates
+            const labels = mapGroup.selectAll('.state-label')
+                .data(data, d => d.stateCode);
+            
+            // Remove old labels
+            labels.exit().remove();
+            
+            // Add new labels
+            labels.enter()
+                .append('text')
+                .attr('class', 'state-label')
+                .merge(labels)
+                .attr('x', d => {
+                    const coords = projection([d.Longitude, d.Latitude]);
+                    return coords ? coords[0] : 0;
+                })
+                .attr('y', d => {
+                    const coords = projection([d.Longitude, d.Latitude]);
+                    return coords ? coords[1] : 0;
+                })
+                .attr('text-anchor', 'middle')
+                .attr('dominant-baseline', 'middle')
+                .style('font-size', '11px')
+                .style('font-weight', 'bold')
+                .style('fill', '#1a1a1a')
+                .style('stroke', '#ffffff')
+                .style('stroke-width', '0.5px')
+                .style('paint-order', 'stroke')
+                .style('pointer-events', 'none')
+                .transition()
+                .duration(500)
+                .text(d => {
+                    const value = d[currentMetric];
+                    return value != null ? value.toFixed(1) : '';
                 });
             
             // Update legend
