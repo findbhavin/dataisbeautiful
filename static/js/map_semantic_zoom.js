@@ -109,6 +109,13 @@ class MapVisualizer {
             .scaleExtent([1, 8])
             .on('zoom', (event) => {
                 this.g.attr('transform', event.transform);
+                
+                // Scale labels inversely to zoom to keep them readable
+                // Also update visibility based on zoom level
+                const scale = event.transform.k;
+                this.g.selectAll('.state-label')
+                    .style('font-size', `${12 / Math.sqrt(scale)}px`)
+                    .style('opacity', scale < 2 ? 1 : 0.8);
             });
         
         this.svg.call(this.zoom);
@@ -182,6 +189,9 @@ class MapVisualizer {
             const matchedStates = states.features.filter(f => this.getStateDataForFeature(f) !== null).length;
             console.log(`Matched ${matchedStates} out of ${states.features.length} states to data`);
             
+            // Render state labels using lat/long coordinates
+            this.renderStateLabels();
+            
             // Update legend
             this.updateLegend();
             
@@ -251,6 +261,66 @@ class MapVisualizer {
         }
         
         return null;
+    }
+    
+    renderStateLabels() {
+        /**
+         * Render text labels on each state using latitude/longitude coordinates.
+         * Labels show the current metric value for each state.
+         * Excludes "Others (Avg)" from display as per requirements.
+         */
+        
+        // Remove any existing labels
+        this.g.selectAll('.state-label').remove();
+        
+        // Get state data excluding "Others (Avg)"
+        const stateData = this.data.by_state.filter(d => d.state_iso !== 'OTH');
+        
+        // Add labels for each state using lat/long coordinates
+        const labels = this.g.selectAll('.state-label')
+            .data(stateData)
+            .join('text')
+            .attr('class', 'state-label')
+            .attr('x', d => {
+                // Convert lat/long to screen coordinates using projection
+                const coords = this.projection([d.longitude, d.latitude]);
+                return coords ? coords[0] : 0;
+            })
+            .attr('y', d => {
+                const coords = this.projection([d.longitude, d.latitude]);
+                return coords ? coords[1] : 0;
+            })
+            .attr('text-anchor', 'middle')
+            .attr('dominant-baseline', 'middle')
+            .style('font-size', '12px')
+            .style('font-weight', 'bold')
+            .style('fill', '#1a1a1a')
+            .style('stroke', '#ffffff')
+            .style('stroke-width', '0.5px')
+            .style('paint-order', 'stroke')
+            .style('pointer-events', 'none')
+            .text(d => {
+                const value = d[this.currentMetric];
+                return this.formatValue(value);
+            });
+        
+        // Store reference to labels for zoom updates
+        this.labels = labels;
+    }
+    
+    updateStateLabels() {
+        /**
+         * Update state labels with new metric values and handle zoom-based visibility.
+         */
+        if (!this.labels || this.labels.empty()) return;
+        
+        this.labels
+            .transition()
+            .duration(500)
+            .text(d => {
+                const value = d[this.currentMetric];
+                return this.formatValue(value);
+            });
     }
     
     getStateDataById(stateId) {
@@ -351,13 +421,21 @@ class MapVisualizer {
     
     getMetricLabel(metric) {
         const labels = {
-            'total_subscribers': 'Total Subscribers',
-            'total_prepaid': 'Prepaid Subscribers',
-            'total_postpaid': 'Postpaid Subscribers',
-            'verizon_total': 'Verizon Subscribers',
-            'tmobile_total': 'T-Mobile Subscribers',
-            'att_total': 'AT&T Subscribers',
-            'others_total': 'Other Carriers'
+            'total_subscribers': 'Total Mobile (T)',
+            'total_prepaid': 'Total (Pre)',
+            'total_postpaid': 'Total (Post)',
+            'verizon_total': 'Verizon (T)',
+            'verizon_prepaid': 'Verizon (Pre)',
+            'verizon_postpaid': 'Verizon (Post)',
+            'tmobile_total': 'T-Mobile (T)',
+            'tmobile_prepaid': 'T-Mobile (Pre)',
+            'tmobile_postpaid': 'T-Mobile (Post)',
+            'att_total': 'AT&T (T)',
+            'att_prepaid': 'AT&T (Pre)',
+            'att_postpaid': 'AT&T (Post)',
+            'others_total': 'Others (T)',
+            'others_prepaid': 'Others (Pre)',
+            'others_postpaid': 'Others (Post)'
         };
         return labels[metric] || metric;
     }
@@ -408,6 +486,9 @@ class MapVisualizer {
                 if (!stateData) return '#cccccc';
                 return this.colorScale(stateData[this.currentMetric]);
             });
+        
+        // Update state labels with new metric values
+        this.updateStateLabels();
         
         this.updateLegend();
     }
