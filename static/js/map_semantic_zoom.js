@@ -36,11 +36,15 @@ class MapVisualizer {
         this.OTHERS_AVG_STATE_ISO = 'OTH';  // ISO code for "Others (Avg)" to exclude from map
         
         // Constants for state styling
+        // Using #1f2937 (dark gray) instead of #ffffff (white) for clear contrast against glass background
+        // CSS also uses dark gray (#333333) to ensure visibility regardless of style precedence
         this.STATE_STROKE_COLOR = '#1f2937';  // Dark gray borders for visibility
-        this.STATE_STROKE_WIDTH = 1;  // Balanced stroke width
+        this.STATE_STROKE_WIDTH = 1;  // Balanced stroke width (CSS fallback is 0.5px)
         this.STATE_FILL_OPACITY = 0.9;  // Slightly higher opacity for better color saturation
         
-        // Color scheme for choropleth - removed lightest color (#c6dbef) that blends with background
+        // Color scheme for choropleth (8 colors provide adequate granularity for data distribution)
+        // Removed lightest color (#c6dbef) as it was nearly invisible against the white glass background
+        // New lightest color (#9ecae1) is 12% darker and provides sufficient contrast
         this.colorScheme = ['#9ecae1', '#6baed6', '#4292c6', '#2171b5', '#08519c', '#08306b', '#041f47', '#021324'];
         this.debugLog('[MapVisualizer] Color scheme initialized with', this.colorScheme.length, 'colors:', this.colorScheme);
         

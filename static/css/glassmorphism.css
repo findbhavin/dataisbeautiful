@@ -152,10 +152,11 @@ button:active {
     display: block;
 }
 
-/* State styling */
+/* State styling - Dark borders for visibility against glass background */
+/* JavaScript overrides these with #1f2937 and 1px, but CSS provides visible fallback */
 .state {
     stroke: #333333;  /* Dark gray for visibility */
-    stroke-width: 0.5px;  /* Thicker than before */
+    stroke-width: 0.5px;  /* Thicker than before (was 0.3px semi-transparent white) */
     cursor: pointer;
     transition: all 0.2s ease;
 }
