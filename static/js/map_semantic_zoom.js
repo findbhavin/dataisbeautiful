@@ -591,7 +591,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         d3.select('#map-svg-container').html('<div class="loading"><div class="spinner"></div>Loading visualization...</div>');
         
         await visualizer.initialize();
-        this.debugLog('MapVisualizer initialized successfully');
+        visualizer.debugLog('MapVisualizer initialized successfully');
     } catch (error) {
         console.error('Failed to initialize MapVisualizer:', error);
         visualizer.showError('Failed to load visualization. Please refresh the page.');
