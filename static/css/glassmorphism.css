@@ -154,8 +154,8 @@ button:active {
 
 /* State styling */
 .state {
-    stroke: rgba(255, 255, 255, 0.5);
-    stroke-width: 0.3px;
+    stroke: #333333;  /* Dark gray for visibility */
+    stroke-width: 0.5px;  /* Thicker than before */
     cursor: pointer;
     transition: all 0.2s ease;
 }

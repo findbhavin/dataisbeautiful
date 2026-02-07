@@ -36,12 +36,12 @@ class MapVisualizer {
         this.OTHERS_AVG_STATE_ISO = 'OTH';  // ISO code for "Others (Avg)" to exclude from map
         
         // Constants for state styling
-        this.STATE_STROKE_COLOR = '#ffffff';  // White borders for state paths
-        this.STATE_STROKE_WIDTH = 1.5;  // Border width for state paths
-        this.STATE_FILL_OPACITY = 0.85;  // Fill opacity for state paths
+        this.STATE_STROKE_COLOR = '#1f2937';  // Dark gray borders for visibility
+        this.STATE_STROKE_WIDTH = 1;  // Balanced stroke width
+        this.STATE_FILL_OPACITY = 0.9;  // Slightly higher opacity for better color saturation
         
-        // Color scheme for choropleth
-        this.colorScheme = ['#c6dbef', '#9ecae1', '#6baed6', '#4292c6', '#2171b5', '#08519c', '#08306b', '#041f47', '#021324'];
+        // Color scheme for choropleth - removed lightest color (#c6dbef) that blends with background
+        this.colorScheme = ['#9ecae1', '#6baed6', '#4292c6', '#2171b5', '#08519c', '#08306b', '#041f47', '#021324'];
         this.debugLog('[MapVisualizer] Color scheme initialized with', this.colorScheme.length, 'colors:', this.colorScheme);
         
         // FIPS to ISO-2 state code mapping
