@@ -25,6 +25,9 @@ class MapVisualizer {
         this.zoom = null;
         this.tooltip = null;
         
+        // Debug mode - set to false in production
+        this.DEBUG = true;  // Set to false to disable console logging
+        
         this.width = 960;
         this.height = 600;
         
@@ -32,9 +35,14 @@ class MapVisualizer {
         this.BASE_LABEL_FONT_SIZE = 12;  // Base font size for state labels
         this.OTHERS_AVG_STATE_ISO = 'OTH';  // ISO code for "Others (Avg)" to exclude from map
         
+        // Constants for state styling
+        this.STATE_STROKE_COLOR = '#ffffff';  // White borders for state paths
+        this.STATE_STROKE_WIDTH = 1.5;  // Border width for state paths
+        this.STATE_FILL_OPACITY = 0.85;  // Fill opacity for state paths
+        
         // Color scheme for choropleth
         this.colorScheme = ['#c6dbef', '#9ecae1', '#6baed6', '#4292c6', '#2171b5', '#08519c', '#08306b', '#041f47', '#021324'];
-        console.log('[MapVisualizer] Color scheme initialized with', this.colorScheme.length, 'colors:', this.colorScheme);
+        this.debugLog('[MapVisualizer] Color scheme initialized with', this.colorScheme.length, 'colors:', this.colorScheme);
         
         // FIPS to ISO-2 state code mapping
         // Source: https://www.census.gov/library/reference/code-lists/ansi.html
@@ -51,6 +59,15 @@ class MapVisualizer {
             '50': 'VT', '51': 'VA', '53': 'WA', '54': 'WV', '55': 'WI',
             '56': 'WY', '72': 'PR'
         };
+    }
+    
+    /**
+     * Debug logging helper - only logs when DEBUG flag is enabled
+     */
+    debugLog(...args) {
+        if (this.DEBUG) {
+            console.log(...args);
+        }
     }
     
     async initialize() {
@@ -80,7 +97,7 @@ class MapVisualizer {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             this.data = await response.json();
-            console.log('Data loaded:', this.data);
+            this.debugLog('Data loaded:', this.data);
         } catch (error) {
             console.error('Error loading data:', error);
             throw error;
@@ -88,7 +105,7 @@ class MapVisualizer {
     }
     
     setupSVG() {
-        console.log('[MapVisualizer] Setting up SVG canvas');
+        this.debugLog('[MapVisualizer] Setting up SVG canvas');
         const container = d3.select(`#${this.containerId}`);
         container.selectAll('*').remove();
         
@@ -100,7 +117,7 @@ class MapVisualizer {
             .attr('viewBox', `0 0 ${this.width} ${this.height}`)
             .attr('preserveAspectRatio', 'xMidYMid meet');
         
-        console.log(`[MapVisualizer] SVG dimensions: ${this.width}x${this.height}`);
+        this.debugLog(`[MapVisualizer] SVG dimensions: ${this.width}x${this.height}`);
         
         // Create container group for zoom
         this.g = this.svg.append('g');
@@ -110,7 +127,7 @@ class MapVisualizer {
             .translate([this.width / 2, this.height / 2])
             .scale(1200);
         
-        console.log('[MapVisualizer] Projection configured: AlbersUsa, scale=1200');
+        this.debugLog('[MapVisualizer] Projection configured: AlbersUsa, scale=1200');
         
         this.path = d3.geoPath().projection(this.projection);
         
@@ -149,7 +166,7 @@ class MapVisualizer {
             const us = await d3.json('https://d3js.org/us-10m.v1.json')
                 .catch((err) => {
                     console.error('Failed to load TopoJSON from CDN:', err);
-                    console.log('Using fallback map data');
+                    this.debugLog('Using fallback map data');
                     return this.createFallbackMapData();
                 });
             
@@ -164,7 +181,7 @@ class MapVisualizer {
             // Convert TopoJSON to GeoJSON
             const states = topojson.feature(us, us.objects.states);
             
-            console.log(`Loaded ${states.features.length} state features from TopoJSON`);
+            this.debugLog(`Loaded ${states.features.length} state features from TopoJSON`);
             
             // Validate that we have features
             if (!states.features || states.features.length === 0) {
@@ -177,7 +194,7 @@ class MapVisualizer {
             this.updateColorScale();
             
             // Draw states with proper data matching
-            console.log('[MapVisualizer] Drawing states with styling: stroke=#ffffff, stroke-width=1.5, fill-opacity=0.85');
+            this.debugLog(`[MapVisualizer] Drawing states with styling: stroke=${this.STATE_STROKE_COLOR}, stroke-width=${this.STATE_STROKE_WIDTH}, fill-opacity=${this.STATE_FILL_OPACITY}`);
             const statePaths = this.g.selectAll('.state')
                 .data(states.features)
                 .join('path')
@@ -187,26 +204,26 @@ class MapVisualizer {
                     const stateData = this.getStateDataForFeature(d);
                     if (!stateData) {
                         // Use neutral fill for states without data
-                        console.log('[MapVisualizer] State without data, using neutral color #cccccc:', d);
+                        this.debugLog('[MapVisualizer] State without data, using neutral color #cccccc:', d);
                         return '#cccccc';
                     }
                     const color = this.colorScale(stateData[this.currentMetric]);
-                    console.log(`[MapVisualizer] State ${stateData.state_iso} (${stateData.state_name}): value=${stateData[this.currentMetric]}, color=${color}`);
+                    this.debugLog(`[MapVisualizer] State ${stateData.state_iso} (${stateData.state_name}): value=${stateData[this.currentMetric]}, color=${color}`);
                     return color;
                 })
-                .attr('stroke', '#ffffff')
-                .attr('stroke-width', 1.5)
-                .style('fill-opacity', 0.85)
+                .attr('stroke', this.STATE_STROKE_COLOR)
+                .attr('stroke-width', this.STATE_STROKE_WIDTH)
+                .style('fill-opacity', this.STATE_FILL_OPACITY)
                 .on('mouseover', (event, d) => this.handleMouseOver(event, d))
                 .on('mousemove', (event, d) => this.handleMouseMove(event, d))
                 .on('mouseout', (event, d) => this.handleMouseOut(event, d))
                 .on('click', (event, d) => this.handleClick(event, d));
             
-            console.log('[MapVisualizer] Total state paths created:', statePaths.size());
+            this.debugLog('[MapVisualizer] Total state paths created:', statePaths.size());
             
             // Log matching statistics for debugging
             const matchedStates = states.features.filter(f => this.getStateDataForFeature(f) !== null).length;
-            console.log(`Matched ${matchedStates} out of ${states.features.length} states to data`);
+            this.debugLog(`Matched ${matchedStates} out of ${states.features.length} states to data`);
             
             // Render state labels using lat/long coordinates
             this.renderStateLabels();
@@ -355,16 +372,16 @@ class MapVisualizer {
         
         const extent = d3.extent(values);
         
-        console.log(`[MapVisualizer] Updating color scale for metric '${this.currentMetric}'`);
-        console.log('[MapVisualizer] Value extent:', extent, 'min:', extent[0], 'max:', extent[1]);
-        console.log('[MapVisualizer] Number of data points:', values.length);
+        this.debugLog(`[MapVisualizer] Updating color scale for metric '${this.currentMetric}'`);
+        this.debugLog('[MapVisualizer] Value extent:', extent, 'min:', extent[0], 'max:', extent[1]);
+        this.debugLog('[MapVisualizer] Number of data points:', values.length);
         
         this.colorScale = d3.scaleQuantize()
             .domain(extent)
             .range(this.colorScheme);
         
-        console.log('[MapVisualizer] Color scale domain:', this.colorScale.domain());
-        console.log('[MapVisualizer] Color scale range:', this.colorScale.range());
+        this.debugLog('[MapVisualizer] Color scale domain:', this.colorScale.domain());
+        this.debugLog('[MapVisualizer] Color scale range:', this.colorScale.range());
     }
     
     updateLegend() {
@@ -402,11 +419,11 @@ class MapVisualizer {
     handleMouseOver(event, d) {
         const stateData = this.getStateDataForFeature(d);
         if (!stateData) {
-            console.log('[MapVisualizer] Mouse over state without data');
+            this.debugLog('[MapVisualizer] Mouse over state without data');
             return;
         }
         
-        console.log(`[MapVisualizer] Mouse over state: ${stateData.state_name} (${stateData.state_iso})`);
+        this.debugLog(`[MapVisualizer] Mouse over state: ${stateData.state_name} (${stateData.state_iso})`);
         
         d3.select(event.currentTarget)
             .style('opacity', 0.8);
@@ -433,7 +450,7 @@ class MapVisualizer {
         const stateData = this.getStateDataForFeature(d);
         if (!stateData) return;
         
-        console.log('Clicked state:', stateData.state_name, stateData);
+        this.debugLog('Clicked state:', stateData.state_name, stateData);
         // Could implement drill-down functionality here
     }
     
@@ -505,13 +522,13 @@ class MapVisualizer {
     }
     
     changeMetric(metric) {
-        console.log(`[MapVisualizer] Changing metric from '${this.currentMetric}' to '${metric}'`);
+        this.debugLog(`[MapVisualizer] Changing metric from '${this.currentMetric}' to '${metric}'`);
         this.currentMetric = metric;
         this.updateColorScale();
         
         // Update state colors
-        console.log('[MapVisualizer] Updating state colors with transition (duration: 750ms)');
-        console.log('[MapVisualizer] Maintaining styling: stroke=#ffffff, stroke-width=1.5, fill-opacity=0.85');
+        this.debugLog('[MapVisualizer] Updating state colors with transition (duration: 750ms)');
+        this.debugLog(`[MapVisualizer] Maintaining styling: stroke=${this.STATE_STROKE_COLOR}, stroke-width=${this.STATE_STROKE_WIDTH}, fill-opacity=${this.STATE_FILL_OPACITY}`);
         this.g.selectAll('.state')
             .transition()
             .duration(750)
@@ -520,9 +537,9 @@ class MapVisualizer {
                 if (!stateData) return '#cccccc';
                 return this.colorScale(stateData[this.currentMetric]);
             })
-            .attr('stroke', '#ffffff')
-            .attr('stroke-width', 1.5)
-            .style('fill-opacity', 0.85);
+            .attr('stroke', this.STATE_STROKE_COLOR)
+            .attr('stroke-width', this.STATE_STROKE_WIDTH)
+            .style('fill-opacity', this.STATE_FILL_OPACITY);
         
         // Update state labels with new metric values
         this.updateStateLabels();
@@ -574,7 +591,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         d3.select('#map-svg-container').html('<div class="loading"><div class="spinner"></div>Loading visualization...</div>');
         
         await visualizer.initialize();
-        console.log('MapVisualizer initialized successfully');
+        this.debugLog('MapVisualizer initialized successfully');
     } catch (error) {
         console.error('Failed to initialize MapVisualizer:', error);
         visualizer.showError('Failed to load visualization. Please refresh the page.');
