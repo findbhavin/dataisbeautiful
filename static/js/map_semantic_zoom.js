@@ -33,7 +33,8 @@ class MapVisualizer {
         this.OTHERS_AVG_STATE_ISO = 'OTH';  // ISO code for "Others (Avg)" to exclude from map
         
         // Color scheme for choropleth
-        this.colorScheme = ['#f7fbff', '#deebf7', '#c6dbef', '#9ecae1', '#6baed6', '#4292c6', '#2171b5', '#08519c', '#08306b'];
+        this.colorScheme = ['#c6dbef', '#9ecae1', '#6baed6', '#4292c6', '#2171b5', '#08519c', '#08306b', '#041f47', '#021324'];
+        console.log('[MapVisualizer] Color scheme initialized with', this.colorScheme.length, 'colors:', this.colorScheme);
         
         // FIPS to ISO-2 state code mapping
         // Source: https://www.census.gov/library/reference/code-lists/ansi.html
@@ -87,6 +88,7 @@ class MapVisualizer {
     }
     
     setupSVG() {
+        console.log('[MapVisualizer] Setting up SVG canvas');
         const container = d3.select(`#${this.containerId}`);
         container.selectAll('*').remove();
         
@@ -98,6 +100,8 @@ class MapVisualizer {
             .attr('viewBox', `0 0 ${this.width} ${this.height}`)
             .attr('preserveAspectRatio', 'xMidYMid meet');
         
+        console.log(`[MapVisualizer] SVG dimensions: ${this.width}x${this.height}`);
+        
         // Create container group for zoom
         this.g = this.svg.append('g');
         
@@ -105,6 +109,8 @@ class MapVisualizer {
         this.projection = d3.geoAlbersUsa()
             .translate([this.width / 2, this.height / 2])
             .scale(1200);
+        
+        console.log('[MapVisualizer] Projection configured: AlbersUsa, scale=1200');
         
         this.path = d3.geoPath().projection(this.projection);
         
@@ -171,7 +177,8 @@ class MapVisualizer {
             this.updateColorScale();
             
             // Draw states with proper data matching
-            this.g.selectAll('.state')
+            console.log('[MapVisualizer] Drawing states with styling: stroke=#ffffff, stroke-width=1.5, fill-opacity=0.85');
+            const statePaths = this.g.selectAll('.state')
                 .data(states.features)
                 .join('path')
                 .attr('class', 'state')
@@ -180,14 +187,22 @@ class MapVisualizer {
                     const stateData = this.getStateDataForFeature(d);
                     if (!stateData) {
                         // Use neutral fill for states without data
+                        console.log('[MapVisualizer] State without data, using neutral color #cccccc:', d);
                         return '#cccccc';
                     }
-                    return this.colorScale(stateData[this.currentMetric]);
+                    const color = this.colorScale(stateData[this.currentMetric]);
+                    console.log(`[MapVisualizer] State ${stateData.state_iso} (${stateData.state_name}): value=${stateData[this.currentMetric]}, color=${color}`);
+                    return color;
                 })
+                .attr('stroke', '#ffffff')
+                .attr('stroke-width', 1.5)
+                .style('fill-opacity', 0.85)
                 .on('mouseover', (event, d) => this.handleMouseOver(event, d))
                 .on('mousemove', (event, d) => this.handleMouseMove(event, d))
                 .on('mouseout', (event, d) => this.handleMouseOut(event, d))
                 .on('click', (event, d) => this.handleClick(event, d));
+            
+            console.log('[MapVisualizer] Total state paths created:', statePaths.size());
             
             // Log matching statistics for debugging
             const matchedStates = states.features.filter(f => this.getStateDataForFeature(f) !== null).length;
@@ -340,9 +355,16 @@ class MapVisualizer {
         
         const extent = d3.extent(values);
         
+        console.log(`[MapVisualizer] Updating color scale for metric '${this.currentMetric}'`);
+        console.log('[MapVisualizer] Value extent:', extent, 'min:', extent[0], 'max:', extent[1]);
+        console.log('[MapVisualizer] Number of data points:', values.length);
+        
         this.colorScale = d3.scaleQuantize()
             .domain(extent)
             .range(this.colorScheme);
+        
+        console.log('[MapVisualizer] Color scale domain:', this.colorScale.domain());
+        console.log('[MapVisualizer] Color scale range:', this.colorScale.range());
     }
     
     updateLegend() {
@@ -379,7 +401,12 @@ class MapVisualizer {
     
     handleMouseOver(event, d) {
         const stateData = this.getStateDataForFeature(d);
-        if (!stateData) return;
+        if (!stateData) {
+            console.log('[MapVisualizer] Mouse over state without data');
+            return;
+        }
+        
+        console.log(`[MapVisualizer] Mouse over state: ${stateData.state_name} (${stateData.state_iso})`);
         
         d3.select(event.currentTarget)
             .style('opacity', 0.8);
@@ -478,10 +505,13 @@ class MapVisualizer {
     }
     
     changeMetric(metric) {
+        console.log(`[MapVisualizer] Changing metric from '${this.currentMetric}' to '${metric}'`);
         this.currentMetric = metric;
         this.updateColorScale();
         
         // Update state colors
+        console.log('[MapVisualizer] Updating state colors with transition (duration: 750ms)');
+        console.log('[MapVisualizer] Maintaining styling: stroke=#ffffff, stroke-width=1.5, fill-opacity=0.85');
         this.g.selectAll('.state')
             .transition()
             .duration(750)
@@ -489,7 +519,10 @@ class MapVisualizer {
                 const stateData = this.getStateDataForFeature(d);
                 if (!stateData) return '#cccccc';
                 return this.colorScale(stateData[this.currentMetric]);
-            });
+            })
+            .attr('stroke', '#ffffff')
+            .attr('stroke-width', 1.5)
+            .style('fill-opacity', 0.85);
         
         // Update state labels with new metric values
         this.updateStateLabels();
