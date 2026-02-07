@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 
 from app.routers import mobile, geo
@@ -14,6 +15,17 @@ app = FastAPI(
     title="MapVisual Visualization Engine",
     description="Interactive US map visualization with mobile subscriber data",
     version="1.0.0"
+)
+
+# Add CORS middleware to allow cross-origin requests
+# TODO: In production, restrict allow_origins to specific trusted domains
+# Example: allow_origins=["https://yourdomain.com"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for development
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Setup templates

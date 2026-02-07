@@ -28,7 +28,7 @@ def load_mobile_subscribers_data() -> Dict[str, Any]:
     df_states = df[df['state_iso'] != 'OTH'].copy()
     
     # Calculate total subscribers across all states
-    total_subscribers = int(df_states['Total_Mobile_T'].sum() * 1_000_000)  # Convert millions to actual count
+    total_subscribers = int(df_states['Total Mobile (T)'].sum() * 1_000_000)  # Convert millions to actual count
     
     # Prepare state-level data
     by_state = []
@@ -38,33 +38,43 @@ def load_mobile_subscribers_data() -> Dict[str, Any]:
         state_data = {
             'state_iso': state_iso,
             'state_name': get_state_name(state_iso) if state_iso != 'OTH' else 'Other',
-            'total_subscribers': float(row['Total_Mobile_T']),
-            'total_prepaid': float(row['Total_Pre']),
-            'total_postpaid': float(row['Total_Post']),
-            'verizon_total': float(row['Verizon_T']),
-            'verizon_prepaid': float(row['Verizon_Pre']),
-            'verizon_postpaid': float(row['Verizon_Post']),
-            'tmobile_total': float(row['TMobile_T']),
-            'tmobile_prepaid': float(row['TMobile_Pre']),
-            'tmobile_postpaid': float(row['TMobile_Post']),
-            'att_total': float(row['ATT_T']),
-            'att_prepaid': float(row['ATT_Pre']),
-            'att_postpaid': float(row['ATT_Post']),
-            'others_total': float(row['Others_T']),
-            'others_prepaid': float(row['Others_Pre']),
-            'others_postpaid': float(row['Others_Post']),
+            'latitude': float(row['Latitude']),
+            'longitude': float(row['Longitude']),
+            'total_subscribers': float(row['Total Mobile (T)']),
+            'total_prepaid': float(row['Total (Pre)']),
+            'total_postpaid': float(row['Total (Post)']),
+            'verizon_total': float(row['Verizon (T)']),
+            'verizon_prepaid': float(row['Verizon (Pre)']),
+            'verizon_postpaid': float(row['Verizon (Post)']),
+            'tmobile_total': float(row['T-Mobile (T)']),
+            'tmobile_prepaid': float(row['T-Mobile (Pre)']),
+            'tmobile_postpaid': float(row['T-Mobile (Post)']),
+            'att_total': float(row['AT&T (T)']),
+            'att_prepaid': float(row['AT&T (Pre)']),
+            'att_postpaid': float(row['AT&T (Post)']),
+            'others_total': float(row['Others (T)']),
+            'others_prepaid': float(row['Others (Pre)']),
+            'others_postpaid': float(row['Others (Post)']),
         }
         by_state.append(state_data)
     
-    # Available metrics
+    # Available metrics - now includes all 15 metrics
     metrics_available = [
         'total_subscribers',
         'total_prepaid',
         'total_postpaid',
         'verizon_total',
+        'verizon_prepaid',
+        'verizon_postpaid',
         'tmobile_total',
+        'tmobile_prepaid',
+        'tmobile_postpaid',
         'att_total',
-        'others_total'
+        'att_prepaid',
+        'att_postpaid',
+        'others_total',
+        'others_prepaid',
+        'others_postpaid'
     ]
     
     return {
