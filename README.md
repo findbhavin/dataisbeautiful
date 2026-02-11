@@ -19,7 +19,7 @@ A collection of interactive data visualizations showcasing beautiful representat
 #### Using Docker (Recommended)
 
 ```bash
-# Download JavaScript dependencies first (required for full functionality)
+# Download JavaScript dependencies first (REQUIRED for map visualization)
 ./scripts/download_dependencies.sh
 
 # Build and run
@@ -30,6 +30,14 @@ docker run -d -p 8080:8080 mapvisual:latest
 open http://localhost:8080
 ```
 
+**⚠️ IMPORTANT:** The repository includes placeholder files for D3.js, TopoJSON, and map data. 
+You **MUST** run `./scripts/download_dependencies.sh` before starting the app to download:
+- D3.js library (~900KB)
+- TopoJSON library (~60KB)
+- US states topology data (~60KB)
+
+Without these files, the map visualization will fail with "Cannot read properties of undefined" error.
+
 **Tip**: For automated deployments, add `RUN ./scripts/download_dependencies.sh` to your Dockerfile to download libraries during the build process.
 
 #### Local Development
@@ -38,7 +46,7 @@ open http://localhost:8080
 # Install dependencies
 pip install -r requirements.txt
 
-# Download JavaScript libraries (D3.js and TopoJSON)
+# Download JavaScript libraries (D3.js, TopoJSON, and map data)
 # IMPORTANT: Run this before starting the app for full functionality
 ./scripts/download_dependencies.sh
 
@@ -49,7 +57,10 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8080
 open http://localhost:8080
 ```
 
-**Note**: The repository includes placeholder files for D3.js and TopoJSON. Run `./scripts/download_dependencies.sh` to download the actual libraries (~900KB + ~60KB) for full map visualization functionality.
+**⚠️ Note**: The repository includes placeholder files for D3.js, TopoJSON, and map topology data. 
+Run `./scripts/download_dependencies.sh` to download the actual libraries and map data 
+(~900KB + ~60KB + ~60KB) for full map visualization functionality. 
+Without proper topology data, the map will show an error message guiding you to run the download script.
 
 ### API Documentation
 

@@ -37,17 +37,37 @@ fi
 # Download US Topology Data (if needed)
 echo ""
 echo "📦 Downloading US Topology Data..."
-if [ -f "data/topojson/us_states.topo.json" ] && [ $(wc -c < "data/topojson/us_states.topo.json") -gt 1000 ]; then
-    echo "✓ US States topology already exists and looks valid"
-else
-    curl -L "https://d3js.org/us-10m.v1.json" -o "data/topojson/us_states.topo.json" --progress-bar
-    if [ -f "data/topojson/us_states.topo.json" ]; then
-        SIZE=$(du -h data/topojson/us_states.topo.json | cut -f1)
-        echo "✓ US States topology downloaded successfully ($SIZE)"
+TOPOJSON_DIR="data/topojson"
+
+# Check if file exists and is valid
+if [ -f "$TOPOJSON_DIR/us_states.topo.json" ]; then
+    FILE_SIZE=$(wc -c < "$TOPOJSON_DIR/us_states.topo.json")
+    if [ "$FILE_SIZE" -gt 50000 ]; then
+        echo "✓ US States topology already exists and looks valid ($FILE_SIZE bytes)"
     else
-        echo "⚠ Warning: Failed to download US States topology"
+        echo "⚠ Existing file is too small ($FILE_SIZE bytes) - downloading new copy..."
+        curl -L "https://d3js.org/us-10m.v1.json" -o "$TOPOJSON_DIR/us_states.topo.json" --progress-bar
     fi
+else
+    echo "Downloading from https://d3js.org/us-10m.v1.json..."
+    curl -L "https://d3js.org/us-10m.v1.json" -o "$TOPOJSON_DIR/us_states.topo.json" --progress-bar
 fi
+
+# Validate file was downloaded and is not empty
+if [ ! -s "$TOPOJSON_DIR/us_states.topo.json" ]; then
+    echo "❌ ERROR: Failed to download US topology data"
+    exit 1
+fi
+
+# Check file size (should be at least 50KB for valid topology)
+FILE_SIZE=$(wc -c < "$TOPOJSON_DIR/us_states.topo.json")
+if [ "$FILE_SIZE" -lt 50000 ]; then
+    echo "❌ ERROR: Downloaded topology file is too small (${FILE_SIZE} bytes) - may be placeholder or download failed"
+    echo "Expected file size: ~60-70KB"
+    exit 1
+fi
+
+echo "✓ US topology data downloaded successfully (${FILE_SIZE} bytes)"
 
 # Verify downloads
 echo ""
