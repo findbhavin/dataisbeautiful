@@ -24,6 +24,8 @@ class MapVisualizer {
         this.g = null;
         this.zoom = null;
         this.tooltip = null;
+        this.resizeTimeout = null;  // For debouncing window resize events
+        this.resizeHandler = null;  // Store resize handler reference for potential cleanup
         
         // Debug mode - set to false in production
         this.DEBUG = true;  // Set to false to disable console logging
@@ -150,6 +152,12 @@ class MapVisualizer {
             });
         
         this.svg.call(this.zoom);
+        
+        // CRITICAL FIX: Explicitly set initial zoom transform to identity
+        // This ensures the map always starts at the default zoom/pan position
+        this.svg.call(this.zoom.transform, d3.zoomIdentity);
+        
+        this.debugLog('[MapVisualizer] Initial zoom transform set to identity');
     }
     
     setupTooltip() {
@@ -573,6 +581,19 @@ class MapVisualizer {
                 this.resetZoom();
             });
         }
+        
+        // Optional: Reset zoom on window resize to prevent transform issues
+        // Debounced to avoid excessive resetZoom() calls during resizing
+        // Store handler reference to allow cleanup if needed
+        this.resizeHandler = () => {
+            if (this.resizeTimeout) {
+                clearTimeout(this.resizeTimeout);
+            }
+            this.resizeTimeout = setTimeout(() => {
+                this.resetZoom();
+            }, 250);  // 250ms debounce delay
+        };
+        window.addEventListener('resize', this.resizeHandler);
     }
     
     showError(message) {
