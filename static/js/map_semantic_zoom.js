@@ -673,17 +673,25 @@ class MapVisualizer {
     const MAX_CHECKS = 30; // 30 * 100ms = 3 seconds timeout
     const CHECK_INTERVAL = 100; // ms
     let checkCount = 0;
+    let isInitializing = false; // Flag to prevent concurrent execution
 
     const checkLibraries = () => {
+        // Prevent concurrent polling chains
+        if (isInitializing) {
+            return;
+        }
+        
         checkCount++;
         const d3Ready = typeof d3 !== 'undefined' && d3.version;
         const topojsonReady = typeof topojson !== 'undefined';
         
         if (d3Ready && topojsonReady) {
             console.log('[MapVisualizer] Libraries confirmed available, initializing...');
+            isInitializing = true;
             initializeMap();
         } else if (checkCount >= MAX_CHECKS) {
             console.error('[MapVisualizer] Libraries failed to load after ' + (MAX_CHECKS * CHECK_INTERVAL / 1000) + ' seconds');
+            isInitializing = true;
             showLoadError();
         } else {
             // Check again after a short delay

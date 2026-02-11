@@ -99,7 +99,7 @@
 
     <script>
         // Library loading state
-        const MAX_LOAD_ATTEMPTS = 30; // 30 * 100ms = 3 seconds timeout
+        const MAX_CHECKS = 30; // 30 * 100ms = 3 seconds timeout
         const LOAD_CHECK_INTERVAL = 100; // ms
         let checkCount = 0;
 
@@ -117,9 +117,9 @@
                         console.log('  D3.js version:', d3.version);
                         console.log('  TopoJSON: Available');
                         resolve();
-                    } else if (checkCount > MAX_LOAD_ATTEMPTS) {
+                    } else if (checkCount >= MAX_CHECKS) {
                         clearInterval(checkInterval);
-                        reject(new Error('Libraries failed to load after ' + (MAX_LOAD_ATTEMPTS * LOAD_CHECK_INTERVAL / 1000) + ' seconds'));
+                        reject(new Error('Libraries failed to load after ' + (MAX_CHECKS * LOAD_CHECK_INTERVAL / 1000) + ' seconds'));
                     }
                 }, LOAD_CHECK_INTERVAL);
             });
