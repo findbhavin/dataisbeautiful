@@ -99,8 +99,6 @@
 
     <script>
         // Library loading state
-        let d3LoadAttempts = 0;
-        let topojsonLoadAttempts = 0;
         const MAX_LOAD_ATTEMPTS = 30; // 30 * 100ms = 3 seconds timeout
         const LOAD_CHECK_INTERVAL = 100; // ms
         let checkCount = 0;
@@ -130,7 +128,6 @@
         // Load D3.js fallback if needed
         if (typeof d3 === 'undefined') {
             console.warn('Local D3.js failed, loading CDN fallback...');
-            d3LoadAttempts++;
             const script = document.createElement('script');
             script.src = 'https://unpkg.com/d3@7/dist/d3.min.js';
             script.async = false;
@@ -146,7 +143,6 @@
         // Load TopoJSON fallback if needed
         if (typeof topojson === 'undefined') {
             console.warn('Local TopoJSON failed, loading CDN fallback...');
-            topojsonLoadAttempts++;
             const script = document.createElement('script');
             script.src = 'https://unpkg.com/topojson@3/dist/topojson.min.js';
             script.async = false;
@@ -184,7 +180,7 @@
                 } else {
                     document.getElementById('map-svg-container').innerHTML = `
                         <div class="loading">
-                            <div style="text-align: center;">
+                            <div class="loading-content">
                                 <h2>⚠️ Visualization Unavailable</h2>
                                 <p>Required libraries failed to load. Please refresh the page.</p>
                                 <button onclick="location.reload()">Refresh Page</button>

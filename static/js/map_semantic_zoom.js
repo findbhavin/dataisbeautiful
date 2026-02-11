@@ -711,7 +711,7 @@ class MapVisualizer {
         if (container) {
             container.innerHTML = `
                 <div class="loading">
-                    <div style="text-align: center;">
+                    <div class="loading-content">
                         <h2>⚠️ Visualization Unavailable</h2>
                         <p>Required libraries failed to load. Please refresh the page.</p>
                         <button onclick="location.reload()">Refresh Page</button>
