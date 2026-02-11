@@ -171,21 +171,43 @@ class MapVisualizer {
             .style('position', 'absolute');
     }
     
+    /**
+     * Load topology data with local-first approach and CDN fallback
+     */
+    async loadTopology() {
+        const localPath = '/api/geo/topojson/states';
+        const cdnPath = 'https://d3js.org/us-10m.v1.json';
+        
+        try {
+            console.log('Attempting to load topology from local server...');
+            const us = await d3.json(localPath);
+            console.log('✓ Loaded topology from local server');
+            return us;
+        } catch (localError) {
+            console.warn('Local topology failed:', localError.message);
+            console.log('Attempting to load topology from CDN fallback...');
+            
+            try {
+                const us = await d3.json(cdnPath);
+                console.log('✓ Loaded topology from CDN fallback');
+                return us;
+            } catch (cdnError) {
+                console.error('✗ Both local and CDN topology failed');
+                throw new Error('Unable to load map data from any source. Local: ' + localError.message + ', CDN: ' + cdnError.message);
+            }
+        }
+    }
+
     async renderMap() {
         try {
-            // Load US states TopoJSON from D3.js CDN
+            // Load US states TopoJSON using local-first approach
             // This file uses numeric FIPS codes as feature.id
-            const us = await d3.json('https://d3js.org/us-10m.v1.json')
-                .catch((err) => {
-                    console.error('Failed to load TopoJSON from CDN:', err);
-                    this.debugLog('Using fallback map data');
-                    return this.createFallbackMapData();
-                });
+            const us = await this.loadTopology();
             
             // Validate TopoJSON structure
             if (!us || !us.objects || !us.objects.states) {
                 console.error('Invalid TopoJSON structure:', us);
-                console.warn('Expected us.objects.states to exist. Using fallback map data.');
+                console.warn('Expected us.objects.states to exist.');
                 this.showError('Map data is unavailable. Please refresh the page.');
                 return;
             }
@@ -245,8 +267,47 @@ class MapVisualizer {
             
         } catch (error) {
             console.error('Error rendering map:', error);
-            // Show error message
-            this.showError('Error loading map visualization. Please refresh the page.');
+            
+            // Sanitize error message by converting to string and escaping HTML
+            const sanitizedMessage = String(error.message || 'Unknown error')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+            
+            // Show user-friendly error with retry option
+            const errorContainer = d3.select("#map-svg-container");
+            errorContainer.html('');
+            
+            const errorDiv = errorContainer.append('div')
+                .attr('class', 'error-message')
+                .style('padding', '40px')
+                .style('text-align', 'center')
+                .style('color', '#fff');
+            
+            errorDiv.append('h3')
+                .style('color', '#ff6b6b')
+                .text('⚠️ Map Unavailable');
+            
+            errorDiv.append('p')
+                .text('Unable to load map visualization data.');
+            
+            errorDiv.append('p')
+                .style('font-size', '14px')
+                .style('opacity', '0.8')
+                .text(sanitizedMessage);
+            
+            errorDiv.append('button')
+                .style('margin-top', '20px')
+                .style('padding', '10px 20px')
+                .style('cursor', 'pointer')
+                .style('background-color', '#4CAF50')
+                .style('color', 'white')
+                .style('border', 'none')
+                .style('border-radius', '4px')
+                .text('Retry')
+                .on('click', () => location.reload());
         }
     }
     

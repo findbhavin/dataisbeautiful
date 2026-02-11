@@ -1,0 +1,64 @@
+#!/bin/bash
+
+set -e  # Exit on error
+
+echo "================================================"
+echo "Downloading D3.js and TopoJSON Dependencies"
+echo "================================================"
+
+# Create directories if they don't exist
+mkdir -p static/js
+mkdir -p data/topojson
+
+# Download D3.js v7
+echo ""
+echo "📦 Downloading D3.js v7..."
+curl -L "https://unpkg.com/d3@7/dist/d3.min.js" -o "static/js/d3.min.js" --progress-bar
+if [ -f "static/js/d3.min.js" ]; then
+    SIZE=$(du -h static/js/d3.min.js | cut -f1)
+    echo "✓ D3.js downloaded successfully ($SIZE)"
+else
+    echo "✗ Failed to download D3.js"
+    exit 1
+fi
+
+# Download TopoJSON
+echo ""
+echo "📦 Downloading TopoJSON v3..."
+curl -L "https://unpkg.com/topojson@3/dist/topojson.min.js" -o "static/js/topojson.min.js" --progress-bar
+if [ -f "static/js/topojson.min.js" ]; then
+    SIZE=$(du -h static/js/topojson.min.js | cut -f1)
+    echo "✓ TopoJSON downloaded successfully ($SIZE)"
+else
+    echo "✗ Failed to download TopoJSON"
+    exit 1
+fi
+
+# Download US Topology Data (if needed)
+echo ""
+echo "📦 Downloading US Topology Data..."
+if [ -f "data/topojson/us_states.topo.json" ] && [ $(wc -c < "data/topojson/us_states.topo.json") -gt 1000 ]; then
+    echo "✓ US States topology already exists and looks valid"
+else
+    curl -L "https://d3js.org/us-10m.v1.json" -o "data/topojson/us_states.topo.json" --progress-bar
+    if [ -f "data/topojson/us_states.topo.json" ]; then
+        SIZE=$(du -h data/topojson/us_states.topo.json | cut -f1)
+        echo "✓ US States topology downloaded successfully ($SIZE)"
+    else
+        echo "⚠ Warning: Failed to download US States topology"
+    fi
+fi
+
+# Verify downloads
+echo ""
+echo "================================================"
+echo "Verification"
+echo "================================================"
+ls -lh static/js/d3.min.js static/js/topojson.min.js 2>/dev/null || echo "Some files missing!"
+echo ""
+echo "✅ Download complete! Your app should now work offline."
+echo ""
+echo "To use these files, make sure your HTML loads from local paths:"
+echo '  <script src="/static/js/d3.min.js"></script>'
+echo '  <script src="/static/js/topojson.min.js"></script>'
+echo ""

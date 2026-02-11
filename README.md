@@ -19,6 +19,9 @@ A collection of interactive data visualizations showcasing beautiful representat
 #### Using Docker (Recommended)
 
 ```bash
+# Download JavaScript dependencies first (required for full functionality)
+./scripts/download_dependencies.sh
+
 # Build and run
 docker build -t mapvisual:latest .
 docker run -d -p 8080:8080 mapvisual:latest
@@ -27,11 +30,17 @@ docker run -d -p 8080:8080 mapvisual:latest
 open http://localhost:8080
 ```
 
+**Tip**: For automated deployments, add `RUN ./scripts/download_dependencies.sh` to your Dockerfile to download libraries during the build process.
+
 #### Local Development
 
 ```bash
 # Install dependencies
 pip install -r requirements.txt
+
+# Download JavaScript libraries (D3.js and TopoJSON)
+# IMPORTANT: Run this before starting the app for full functionality
+./scripts/download_dependencies.sh
 
 # Run the application
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8080
@@ -39,6 +48,8 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8080
 # Access the application
 open http://localhost:8080
 ```
+
+**Note**: The repository includes placeholder files for D3.js and TopoJSON. Run `./scripts/download_dependencies.sh` to download the actual libraries (~900KB + ~60KB) for full map visualization functionality.
 
 ### API Documentation
 

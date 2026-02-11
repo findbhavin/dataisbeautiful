@@ -93,9 +93,48 @@
         </div>
     </div>
     
-    <!-- D3.js Library - Using unpkg CDN as fallback -->
-    <script src="https://unpkg.com/d3@7/dist/d3.min.js" onerror="console.error('D3.js failed to load')"></script>
-    <script src="https://unpkg.com/topojson@3/dist/topojson.min.js" onerror="console.error('TopoJSON failed to load')"></script>
+    <!-- D3.js and TopoJSON - Local files with CDN fallback -->
+    <script src="/static/js/d3.min.js"></script>
+    <script src="/static/js/topojson.min.js"></script>
+
+    <!-- Fallback loader for D3.js if local fails -->
+    <script>
+        if (typeof d3 === 'undefined') {
+            console.warn('Local D3.js failed, trying CDN fallback...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/d3@7/dist/d3.min.js';
+            script.async = false;
+            document.head.appendChild(script);
+        }
+    </script>
+
+    <!-- Fallback loader for TopoJSON if local fails -->
+    <script>
+        if (typeof topojson === 'undefined') {
+            console.warn('Local TopoJSON failed, trying CDN fallback...');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/topojson@3/dist/topojson.min.js';
+            script.async = false;
+            document.head.appendChild(script);
+        }
+    </script>
+
+    <!-- Verification script -->
+    <script>
+        window.addEventListener('load', function() {
+            if (typeof d3 !== 'undefined') {
+                console.log('✓ D3.js loaded successfully (version: ' + d3.version + ')');
+            } else {
+                console.error('✗ D3.js failed to load from all sources');
+            }
+            
+            if (typeof topojson !== 'undefined') {
+                console.log('✓ TopoJSON loaded successfully');
+            } else {
+                console.error('✗ TopoJSON failed to load from all sources');
+            }
+        });
+    </script>
     
     <!-- Fallback visualization -->
     <script src="/static/js/fallback_viz.js"></script>
