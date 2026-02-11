@@ -268,18 +268,46 @@ class MapVisualizer {
         } catch (error) {
             console.error('Error rendering map:', error);
             
+            // Sanitize error message by converting to string and escaping HTML
+            const sanitizedMessage = String(error.message || 'Unknown error')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+            
             // Show user-friendly error with retry option
-            d3.select("#map-svg-container")
-                .html(`
-                    <div class="error-message" style="padding: 40px; text-align: center; color: #fff;">
-                        <h3 style="color: #ff6b6b;">⚠️ Map Unavailable</h3>
-                        <p>Unable to load map visualization data.</p>
-                        <p style="font-size: 14px; opacity: 0.8;">${error.message}</p>
-                        <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; cursor: pointer; background-color: #4CAF50; color: white; border: none; border-radius: 4px;">
-                            Retry
-                        </button>
-                    </div>
-                `);
+            const errorContainer = d3.select("#map-svg-container");
+            errorContainer.html('');
+            
+            const errorDiv = errorContainer.append('div')
+                .attr('class', 'error-message')
+                .style('padding', '40px')
+                .style('text-align', 'center')
+                .style('color', '#fff');
+            
+            errorDiv.append('h3')
+                .style('color', '#ff6b6b')
+                .text('⚠️ Map Unavailable');
+            
+            errorDiv.append('p')
+                .text('Unable to load map visualization data.');
+            
+            errorDiv.append('p')
+                .style('font-size', '14px')
+                .style('opacity', '0.8')
+                .text(sanitizedMessage);
+            
+            errorDiv.append('button')
+                .style('margin-top', '20px')
+                .style('padding', '10px 20px')
+                .style('cursor', 'pointer')
+                .style('background-color', '#4CAF50')
+                .style('color', 'white')
+                .style('border', 'none')
+                .style('border-radius', '4px')
+                .text('Retry')
+                .on('click', () => location.reload());
         }
     }
     

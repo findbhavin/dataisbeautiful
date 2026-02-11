@@ -101,7 +101,10 @@
     <script>
         if (typeof d3 === 'undefined') {
             console.warn('Local D3.js failed, trying CDN fallback...');
-            document.write('<script src="https://unpkg.com/d3@7/dist/d3.min.js"><\/script>');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/d3@7/dist/d3.min.js';
+            script.async = false;
+            document.head.appendChild(script);
         }
     </script>
 
@@ -109,7 +112,10 @@
     <script>
         if (typeof topojson === 'undefined') {
             console.warn('Local TopoJSON failed, trying CDN fallback...');
-            document.write('<script src="https://unpkg.com/topojson@3/dist/topojson.min.js"><\/script>');
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/topojson@3/dist/topojson.min.js';
+            script.async = false;
+            document.head.appendChild(script);
         }
     </script>
 
