@@ -673,30 +673,33 @@ class MapVisualizer {
     const MAX_CHECKS = 30; // 30 * 100ms = 3 seconds timeout
     const CHECK_INTERVAL = 100; // ms
     let checkCount = 0;
-    let isInitializing = false; // Flag to prevent concurrent execution
+    let isChecking = false; // Flag to prevent multiple polling chains
 
     const checkLibraries = () => {
-        // Prevent concurrent polling chains
-        if (isInitializing) {
+        // Prevent multiple concurrent polling chains
+        if (isChecking) {
             return;
         }
+        isChecking = true;
         
-        checkCount++;
-        const d3Ready = typeof d3 !== 'undefined' && d3.version;
-        const topojsonReady = typeof topojson !== 'undefined';
+        const doCheck = () => {
+            checkCount++;
+            const d3Ready = typeof d3 !== 'undefined' && d3.version;
+            const topojsonReady = typeof topojson !== 'undefined';
+            
+            if (d3Ready && topojsonReady) {
+                console.log('[MapVisualizer] Libraries confirmed available, initializing...');
+                initializeMap();
+            } else if (checkCount >= MAX_CHECKS) {
+                console.error('[MapVisualizer] Libraries failed to load after ' + (MAX_CHECKS * CHECK_INTERVAL / 1000) + ' seconds');
+                showLoadError();
+            } else {
+                // Check again after a short delay
+                setTimeout(doCheck, CHECK_INTERVAL);
+            }
+        };
         
-        if (d3Ready && topojsonReady) {
-            console.log('[MapVisualizer] Libraries confirmed available, initializing...');
-            isInitializing = true;
-            initializeMap();
-        } else if (checkCount >= MAX_CHECKS) {
-            console.error('[MapVisualizer] Libraries failed to load after ' + (MAX_CHECKS * CHECK_INTERVAL / 1000) + ' seconds');
-            isInitializing = true;
-            showLoadError();
-        } else {
-            // Check again after a short delay
-            setTimeout(checkLibraries, CHECK_INTERVAL);
-        }
+        doCheck();
     };
 
     const initializeMap = async () => {
@@ -729,10 +732,11 @@ class MapVisualizer {
         }
     };
 
-    // Start checking when DOM is ready
+    // Start checking - handle both cases robustly
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', checkLibraries);
+        document.addEventListener('DOMContentLoaded', checkLibraries, { once: true });
     } else {
+        // DOM is already ready, start immediately
         checkLibraries();
     }
 })();
