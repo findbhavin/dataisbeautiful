@@ -150,6 +150,12 @@ class MapVisualizer {
             });
         
         this.svg.call(this.zoom);
+        
+        // CRITICAL FIX: Explicitly set initial zoom transform to identity
+        // This ensures the map always starts at the default zoom/pan position
+        this.svg.call(this.zoom.transform, d3.zoomIdentity);
+        
+        this.debugLog('[MapVisualizer] Initial zoom transform set to identity');
     }
     
     setupTooltip() {
@@ -573,6 +579,11 @@ class MapVisualizer {
                 this.resetZoom();
             });
         }
+        
+        // Optional: Reset zoom on window resize to prevent transform issues
+        window.addEventListener('resize', () => {
+            this.resetZoom();
+        });
     }
     
     showError(message) {
