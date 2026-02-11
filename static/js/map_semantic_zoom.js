@@ -668,18 +668,75 @@ class MapVisualizer {
     }
 }
 
-// Initialize the map when DOM is ready
-document.addEventListener('DOMContentLoaded', async () => {
-    const visualizer = new MapVisualizer('map-svg-container');
-    
-    try {
-        // Show loading state
-        d3.select('#map-svg-container').html('<div class="loading"><div class="spinner"></div>Loading visualization...</div>');
+// Initialize the map when libraries are ready
+(function initializeWhenReady() {
+    const MAX_CHECKS = 30; // 30 * 100ms = 3 seconds timeout
+    const CHECK_INTERVAL = 100; // ms
+    let checkCount = 0;
+    let isChecking = false; // Flag to prevent multiple polling chains
+
+    const checkLibraries = () => {
+        // Prevent multiple concurrent polling chains
+        if (isChecking) {
+            return;
+        }
+        isChecking = true;
         
-        await visualizer.initialize();
-        visualizer.debugLog('MapVisualizer initialized successfully');
-    } catch (error) {
-        console.error('Failed to initialize MapVisualizer:', error);
-        visualizer.showError('Failed to load visualization. Please refresh the page.');
+        const doCheck = () => {
+            checkCount++;
+            const d3Ready = typeof d3 !== 'undefined' && d3.version;
+            const topojsonReady = typeof topojson !== 'undefined';
+            
+            if (d3Ready && topojsonReady) {
+                console.log('[MapVisualizer] Libraries confirmed available, initializing...');
+                initializeMap();
+            } else if (checkCount >= MAX_CHECKS) {
+                console.error('[MapVisualizer] Libraries failed to load after ' + (MAX_CHECKS * CHECK_INTERVAL / 1000) + ' seconds');
+                showLoadError();
+            } else {
+                // Check again after a short delay
+                setTimeout(doCheck, CHECK_INTERVAL);
+            }
+        };
+        
+        doCheck();
+    };
+
+    const initializeMap = async () => {
+        const visualizer = new MapVisualizer('map-svg-container');
+        
+        try {
+            // Show loading state
+            d3.select('#map-svg-container').html('<div class="loading"><div class="spinner"></div>Loading visualization...</div>');
+            
+            await visualizer.initialize();
+            visualizer.debugLog('MapVisualizer initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize MapVisualizer:', error);
+            visualizer.showError('Failed to load visualization. Please refresh the page.');
+        }
+    };
+
+    const showLoadError = () => {
+        const container = document.getElementById('map-svg-container');
+        if (container) {
+            container.innerHTML = `
+                <div class="loading">
+                    <div class="loading-content">
+                        <h2>⚠️ Visualization Unavailable</h2>
+                        <p>Required libraries failed to load. Please refresh the page.</p>
+                        <button onclick="location.reload()">Refresh Page</button>
+                    </div>
+                </div>
+            `;
+        }
+    };
+
+    // Start checking - handle both cases robustly
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', checkLibraries, { once: true });
+    } else {
+        // DOM is already ready, start immediately
+        checkLibraries();
     }
-});
+})();

@@ -97,60 +97,99 @@
     <script src="/static/js/d3.min.js"></script>
     <script src="/static/js/topojson.min.js"></script>
 
-    <!-- Fallback loader for D3.js if local fails -->
     <script>
+        // Library loading state
+        const MAX_CHECKS = 30; // 30 * 100ms = 3 seconds timeout
+        const LOAD_CHECK_INTERVAL = 100; // ms
+
+        // Function to wait for libraries to be available
+        function waitForLibraries() {
+            let checkCount = 0; // Local counter to avoid race conditions
+            
+            return new Promise((resolve, reject) => {
+                const checkInterval = setInterval(() => {
+                    checkCount++;
+                    const d3Ready = typeof d3 !== 'undefined' && d3.version;
+                    const topojsonReady = typeof topojson !== 'undefined';
+
+                    if (d3Ready && topojsonReady) {
+                        clearInterval(checkInterval);
+                        console.log('✓ All libraries loaded successfully');
+                        console.log('  D3.js version:', d3.version);
+                        console.log('  TopoJSON: Available');
+                        resolve();
+                    } else if (checkCount >= MAX_CHECKS) {
+                        clearInterval(checkInterval);
+                        reject(new Error('Libraries failed to load after ' + (MAX_CHECKS * LOAD_CHECK_INTERVAL / 1000) + ' seconds'));
+                    }
+                }, LOAD_CHECK_INTERVAL);
+            });
+        }
+
+        // Load D3.js fallback if needed
         if (typeof d3 === 'undefined') {
-            console.warn('Local D3.js failed, trying CDN fallback...');
+            console.warn('Local D3.js failed, loading CDN fallback...');
             const script = document.createElement('script');
             script.src = 'https://unpkg.com/d3@7/dist/d3.min.js';
             script.async = false;
+            script.onload = () => {
+                console.log('✓ D3.js loaded from CDN');
+            };
+            script.onerror = () => {
+                console.error('✗ D3.js CDN fallback failed');
+            };
             document.head.appendChild(script);
         }
-    </script>
 
-    <!-- Fallback loader for TopoJSON if local fails -->
-    <script>
+        // Load TopoJSON fallback if needed
         if (typeof topojson === 'undefined') {
-            console.warn('Local TopoJSON failed, trying CDN fallback...');
+            console.warn('Local TopoJSON failed, loading CDN fallback...');
             const script = document.createElement('script');
             script.src = 'https://unpkg.com/topojson@3/dist/topojson.min.js';
             script.async = false;
+            script.onload = () => {
+                console.log('✓ TopoJSON loaded from CDN');
+            };
+            script.onerror = () => {
+                console.error('✗ TopoJSON CDN fallback failed');
+            };
             document.head.appendChild(script);
         }
     </script>
 
-    <!-- Verification script -->
-    <script>
-        window.addEventListener('load', function() {
-            if (typeof d3 !== 'undefined') {
-                console.log('✓ D3.js loaded successfully (version: ' + d3.version + ')');
-            } else {
-                console.error('✗ D3.js failed to load from all sources');
-            }
-            
-            if (typeof topojson !== 'undefined') {
-                console.log('✓ TopoJSON loaded successfully');
-            } else {
-                console.error('✗ TopoJSON failed to load from all sources');
-            }
-        });
-    </script>
-    
     <!-- Fallback visualization -->
     <script src="/static/js/fallback_viz.js"></script>
-    
+
     <!-- Map Visualization Script -->
     <script src="/static/js/map_semantic_zoom.js"></script>
-    
-    <!-- Fallback message if libraries don't load -->
+
+    <!-- Initialize visualization after libraries load -->
     <script>
-        window.addEventListener('DOMContentLoaded', function() {
-            setTimeout(function() {
-                if (typeof d3 === 'undefined') {
-                    console.error('D3.js is not available, using fallback visualization');
+        // Wait for DOM and libraries, then initialize
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Wait for libraries to be available
+                await waitForLibraries();
+                
+                // Libraries are ready - initialization will be handled by map_semantic_zoom.js
+                console.log('🚀 Ready to initialize map visualization');
+            } catch (error) {
+                console.error('Failed to load required libraries:', error);
+                console.error('Using fallback visualization...');
+                if (typeof createFallbackVisualization === 'function') {
                     createFallbackVisualization();
+                } else {
+                    document.getElementById('map-svg-container').innerHTML = `
+                        <div class="loading">
+                            <div class="loading-content">
+                                <h2>⚠️ Visualization Unavailable</h2>
+                                <p>Required libraries failed to load. Please refresh the page.</p>
+                                <button onclick="location.reload()">Refresh Page</button>
+                            </div>
+                        </div>
+                    `;
                 }
-            }, 2000);
+            }
         });
     </script>
 </body>
