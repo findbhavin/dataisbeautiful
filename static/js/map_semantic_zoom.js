@@ -668,18 +668,40 @@ class MapVisualizer {
     }
 }
 
-// Initialize the map when DOM is ready
-document.addEventListener('DOMContentLoaded', async () => {
-    const visualizer = new MapVisualizer('map-svg-container');
-    
-    try {
-        // Show loading state
-        d3.select('#map-svg-container').html('<div class="loading"><div class="spinner"></div>Loading visualization...</div>');
+// Initialize the map when libraries are ready
+(function initializeWhenReady() {
+    const checkLibraries = () => {
+        const d3Ready = typeof d3 !== 'undefined' && d3.version;
+        const topojsonReady = typeof topojson !== 'undefined';
         
-        await visualizer.initialize();
-        visualizer.debugLog('MapVisualizer initialized successfully');
-    } catch (error) {
-        console.error('Failed to initialize MapVisualizer:', error);
-        visualizer.showError('Failed to load visualization. Please refresh the page.');
+        if (d3Ready && topojsonReady) {
+            console.log('[MapVisualizer] Libraries confirmed available, initializing...');
+            initializeMap();
+        } else {
+            // Check again after a short delay
+            setTimeout(checkLibraries, 100);
+        }
+    };
+
+    const initializeMap = async () => {
+        const visualizer = new MapVisualizer('map-svg-container');
+        
+        try {
+            // Show loading state
+            d3.select('#map-svg-container').html('<div class="loading"><div class="spinner"></div>Loading visualization...</div>');
+            
+            await visualizer.initialize();
+            visualizer.debugLog('MapVisualizer initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize MapVisualizer:', error);
+            visualizer.showError('Failed to load visualization. Please refresh the page.');
+        }
+    };
+
+    // Start checking when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', checkLibraries);
+    } else {
+        checkLibraries();
     }
-});
+})();
