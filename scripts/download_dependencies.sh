@@ -2,6 +2,10 @@
 
 set -e  # Exit on error
 
+# Constants for file size validation
+MIN_FILE_SIZE=10000        # Minimum valid file size (10KB)
+FULL_RES_THRESHOLD=50000   # Threshold for full-resolution data (50KB)
+
 echo "================================================"
 echo "Downloading D3.js and TopoJSON Dependencies"
 echo "================================================"
@@ -42,7 +46,7 @@ TOPOJSON_DIR="data/topojson"
 # Check if file exists and is valid
 if [ -f "$TOPOJSON_DIR/us_states.topo.json" ]; then
     FILE_SIZE=$(wc -c < "$TOPOJSON_DIR/us_states.topo.json")
-    if [ "$FILE_SIZE" -gt 50000 ]; then
+    if [ "$FILE_SIZE" -gt "$FULL_RES_THRESHOLD" ]; then
         echo "✓ US States topology already exists and looks valid ($FILE_SIZE bytes)"
     else
         echo "⚠ Existing file is simplified topology ($FILE_SIZE bytes) - downloading full-resolution data..."
@@ -50,7 +54,7 @@ if [ -f "$TOPOJSON_DIR/us_states.topo.json" ]; then
         
         # Check if download succeeded
         NEW_SIZE=$(wc -c < "$TOPOJSON_DIR/us_states.topo.json")
-        if [ "$NEW_SIZE" -gt 50000 ]; then
+        if [ "$NEW_SIZE" -gt "$FULL_RES_THRESHOLD" ]; then
             echo "✓ Full-resolution US topology data downloaded successfully ($NEW_SIZE bytes)"
         else
             echo "⚠ Warning: Download may have failed. File size is only $NEW_SIZE bytes."
@@ -63,7 +67,7 @@ else
     
     # Validate download
     FILE_SIZE=$(wc -c < "$TOPOJSON_DIR/us_states.topo.json")
-    if [ "$FILE_SIZE" -lt 10000 ]; then
+    if [ "$FILE_SIZE" -lt "$MIN_FILE_SIZE" ]; then
         echo "❌ ERROR: Failed to download US topology data (file too small: ${FILE_SIZE} bytes)"
         exit 1
     fi
@@ -76,10 +80,10 @@ if [ ! -s "$TOPOJSON_DIR/us_states.topo.json" ]; then
 fi
 
 FILE_SIZE=$(wc -c < "$TOPOJSON_DIR/us_states.topo.json")
-if [ "$FILE_SIZE" -lt 10000 ]; then
+if [ "$FILE_SIZE" -lt "$MIN_FILE_SIZE" ]; then
     echo "❌ ERROR: Topology file is too small (${FILE_SIZE} bytes)"
     exit 1
-elif [ "$FILE_SIZE" -lt 50000 ]; then
+elif [ "$FILE_SIZE" -lt "$FULL_RES_THRESHOLD" ]; then
     echo "⚠ Using simplified topology (${FILE_SIZE} bytes)"
     echo "   For production use with detailed state boundaries, ensure internet access"
     echo "   and re-run this script to download full-resolution data (~60-70KB)"
