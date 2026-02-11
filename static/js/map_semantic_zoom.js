@@ -25,6 +25,7 @@ class MapVisualizer {
         this.zoom = null;
         this.tooltip = null;
         this.resizeTimeout = null;  // For debouncing window resize events
+        this.resizeHandler = null;  // Store resize handler reference for potential cleanup
         
         // Debug mode - set to false in production
         this.DEBUG = true;  // Set to false to disable console logging
@@ -583,14 +584,16 @@ class MapVisualizer {
         
         // Optional: Reset zoom on window resize to prevent transform issues
         // Debounced to avoid excessive resetZoom() calls during resizing
-        window.addEventListener('resize', () => {
+        // Store handler reference to allow cleanup if needed
+        this.resizeHandler = () => {
             if (this.resizeTimeout) {
                 clearTimeout(this.resizeTimeout);
             }
             this.resizeTimeout = setTimeout(() => {
                 this.resetZoom();
             }, 250);  // 250ms debounce delay
-        });
+        };
+        window.addEventListener('resize', this.resizeHandler);
     }
     
     showError(message) {
