@@ -45,29 +45,47 @@ if [ -f "$TOPOJSON_DIR/us_states.topo.json" ]; then
     if [ "$FILE_SIZE" -gt 50000 ]; then
         echo "✓ US States topology already exists and looks valid ($FILE_SIZE bytes)"
     else
-        echo "⚠ Existing file is too small ($FILE_SIZE bytes) - downloading new copy..."
+        echo "⚠ Existing file is simplified topology ($FILE_SIZE bytes) - downloading full-resolution data..."
         curl -L "https://d3js.org/us-10m.v1.json" -o "$TOPOJSON_DIR/us_states.topo.json" --progress-bar
+        
+        # Check if download succeeded
+        NEW_SIZE=$(wc -c < "$TOPOJSON_DIR/us_states.topo.json")
+        if [ "$NEW_SIZE" -gt 50000 ]; then
+            echo "✓ Full-resolution US topology data downloaded successfully ($NEW_SIZE bytes)"
+        else
+            echo "⚠ Warning: Download may have failed. File size is only $NEW_SIZE bytes."
+            echo "   The existing simplified topology will be used as fallback."
+        fi
     fi
 else
     echo "Downloading from https://d3js.org/us-10m.v1.json..."
     curl -L "https://d3js.org/us-10m.v1.json" -o "$TOPOJSON_DIR/us_states.topo.json" --progress-bar
+    
+    # Validate download
+    FILE_SIZE=$(wc -c < "$TOPOJSON_DIR/us_states.topo.json")
+    if [ "$FILE_SIZE" -lt 10000 ]; then
+        echo "❌ ERROR: Failed to download US topology data (file too small: ${FILE_SIZE} bytes)"
+        exit 1
+    fi
 fi
 
-# Validate file was downloaded and is not empty
+# Final validation
 if [ ! -s "$TOPOJSON_DIR/us_states.topo.json" ]; then
-    echo "❌ ERROR: Failed to download US topology data"
+    echo "❌ ERROR: US topology data file is missing or empty"
     exit 1
 fi
 
-# Check file size (should be at least 50KB for valid topology)
 FILE_SIZE=$(wc -c < "$TOPOJSON_DIR/us_states.topo.json")
-if [ "$FILE_SIZE" -lt 50000 ]; then
-    echo "❌ ERROR: Downloaded topology file is too small (${FILE_SIZE} bytes) - may be placeholder or download failed"
-    echo "Expected file size: ~60-70KB"
+if [ "$FILE_SIZE" -lt 10000 ]; then
+    echo "❌ ERROR: Topology file is too small (${FILE_SIZE} bytes)"
     exit 1
+elif [ "$FILE_SIZE" -lt 50000 ]; then
+    echo "⚠ Using simplified topology (${FILE_SIZE} bytes)"
+    echo "   For production use with detailed state boundaries, ensure internet access"
+    echo "   and re-run this script to download full-resolution data (~60-70KB)"
+else
+    echo "✓ US topology data ready (${FILE_SIZE} bytes)"
 fi
-
-echo "✓ US topology data downloaded successfully (${FILE_SIZE} bytes)"
 
 # Verify downloads
 echo ""

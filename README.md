@@ -30,13 +30,14 @@ docker run -d -p 8080:8080 mapvisual:latest
 open http://localhost:8080
 ```
 
-**⚠️ IMPORTANT:** The repository includes placeholder files for D3.js, TopoJSON, and map data. 
-You **MUST** run `./scripts/download_dependencies.sh` before starting the app to download:
+**⚠️ IMPORTANT:** The repository includes a simplified US states topology for offline/testing use. 
+You **SHOULD** run `./scripts/download_dependencies.sh` before starting the app to download:
 - D3.js library (~900KB)
 - TopoJSON library (~60KB)
-- US states topology data (~60KB)
+- US states topology data, full-resolution (~60KB)
 
-Without these files, the map visualization will fail with "Cannot read properties of undefined" error.
+The simplified topology works for testing but shows basic state boundaries. 
+For production-quality visualizations with accurate state shapes, download the full-resolution data.
 
 **Tip**: For automated deployments, add `RUN ./scripts/download_dependencies.sh` to your Dockerfile to download libraries during the build process.
 
@@ -57,10 +58,10 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8080
 open http://localhost:8080
 ```
 
-**⚠️ Note**: The repository includes placeholder files for D3.js, TopoJSON, and map topology data. 
-Run `./scripts/download_dependencies.sh` to download the actual libraries and map data 
-(~900KB + ~60KB + ~60KB) for full map visualization functionality. 
-Without proper topology data, the map will show an error message guiding you to run the download script.
+**⚠️ Note**: The repository includes a simplified US states topology for offline use. 
+Run `./scripts/download_dependencies.sh` to download the actual libraries and full-resolution map data 
+(~900KB + ~60KB + ~60KB) for production-quality map visualization. 
+The simplified topology works but shows basic state boundaries as rectangles.
 
 ### API Documentation
 
