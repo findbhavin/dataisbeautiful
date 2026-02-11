@@ -212,12 +212,19 @@ class MapVisualizer {
                 return;
             }
             
+            // NEW: Validate arcs array exists and is not empty
+            if (!us.arcs || us.arcs.length === 0) {
+                console.error('TopoJSON has no arc data - placeholder file detected');
+                this.showError('Map topology data is incomplete. Please run ./scripts/download_dependencies.sh to download actual map data.');
+                return;
+            }
+            
             // Convert TopoJSON to GeoJSON
             const states = topojson.feature(us, us.objects.states);
             
             this.debugLog(`Loaded ${states.features.length} state features from TopoJSON`);
             
-            // Validate that we have features
+            // Validate features
             if (!states.features || states.features.length === 0) {
                 console.error('No state features found in TopoJSON');
                 this.showError('Map data is empty. Please refresh the page.');

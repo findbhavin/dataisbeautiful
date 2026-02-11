@@ -14,18 +14,45 @@ router = APIRouter(prefix="/api/geo", tags=["geo"])
 @router.get("/topojson/states")
 async def get_states_topojson() -> Dict[str, Any]:
     """
-    Get US states TopoJSON data.
+    Get US states TopoJSON data with validation.
     
     Returns:
         TopoJSON object with US states
+        
+    Raises:
+        HTTPException: If file not found, invalid, or is a placeholder
     """
     try:
         topojson_path = Path(__file__).parent.parent.parent / "data" / "topojson" / "us_states.topo.json"
+        
         with open(topojson_path, 'r') as f:
             data = json.load(f)
+        
+        # Validate it's not a placeholder (check for arcs)
+        if not data.get('arcs') or len(data.get('arcs', [])) == 0:
+            raise ValueError("Placeholder TopoJSON detected - no arc data")
+        
         return data
+        
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="States TopoJSON file not found")
+        # Return helpful error message
+        raise HTTPException(
+            status_code=404, 
+            detail={
+                "error": "States TopoJSON file not found",
+                "solution": "Run ./scripts/download_dependencies.sh to download required map data"
+            }
+        )
+    except ValueError as e:
+        # Placeholder file detected
+        raise HTTPException(
+            status_code=404, 
+            detail={
+                "error": "States TopoJSON file is invalid or placeholder",
+                "message": str(e),
+                "solution": "Run ./scripts/download_dependencies.sh to download required map data"
+            }
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error loading TopoJSON: {str(e)}")
 
