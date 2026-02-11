@@ -171,21 +171,43 @@ class MapVisualizer {
             .style('position', 'absolute');
     }
     
+    /**
+     * Load topology data with local-first approach and CDN fallback
+     */
+    async loadTopology() {
+        const localPath = '/api/geo/topojson/states';
+        const cdnPath = 'https://d3js.org/us-10m.v1.json';
+        
+        try {
+            console.log('Attempting to load topology from local server...');
+            const us = await d3.json(localPath);
+            console.log('✓ Loaded topology from local server');
+            return us;
+        } catch (localError) {
+            console.warn('Local topology failed:', localError.message);
+            console.log('Attempting to load topology from CDN fallback...');
+            
+            try {
+                const us = await d3.json(cdnPath);
+                console.log('✓ Loaded topology from CDN fallback');
+                return us;
+            } catch (cdnError) {
+                console.error('✗ Both local and CDN topology failed');
+                throw new Error('Unable to load map data from any source. Local: ' + localError.message + ', CDN: ' + cdnError.message);
+            }
+        }
+    }
+
     async renderMap() {
         try {
-            // Load US states TopoJSON from D3.js CDN
+            // Load US states TopoJSON using local-first approach
             // This file uses numeric FIPS codes as feature.id
-            const us = await d3.json('https://d3js.org/us-10m.v1.json')
-                .catch((err) => {
-                    console.error('Failed to load TopoJSON from CDN:', err);
-                    this.debugLog('Using fallback map data');
-                    return this.createFallbackMapData();
-                });
+            const us = await this.loadTopology();
             
             // Validate TopoJSON structure
             if (!us || !us.objects || !us.objects.states) {
                 console.error('Invalid TopoJSON structure:', us);
-                console.warn('Expected us.objects.states to exist. Using fallback map data.');
+                console.warn('Expected us.objects.states to exist.');
                 this.showError('Map data is unavailable. Please refresh the page.');
                 return;
             }
@@ -245,8 +267,19 @@ class MapVisualizer {
             
         } catch (error) {
             console.error('Error rendering map:', error);
-            // Show error message
-            this.showError('Error loading map visualization. Please refresh the page.');
+            
+            // Show user-friendly error with retry option
+            d3.select("#map-svg-container")
+                .html(`
+                    <div class="error-message" style="padding: 40px; text-align: center; color: #fff;">
+                        <h3 style="color: #ff6b6b;">⚠️ Map Unavailable</h3>
+                        <p>Unable to load map visualization data.</p>
+                        <p style="font-size: 14px; opacity: 0.8;">${error.message}</p>
+                        <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; cursor: pointer; background-color: #4CAF50; color: white; border: none; border-radius: 4px;">
+                            Retry
+                        </button>
+                    </div>
+                `);
         }
     }
     
