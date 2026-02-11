@@ -65,3 +65,8 @@ temp/
 
 # OS files
 Thumbs.db
+
+# Note: static/js/d3.min.js and static/js/topojson.min.js are placeholders in the repo.
+# After running ./scripts/download_dependencies.sh, the actual libraries (~900KB and ~60KB)
+# will replace these placeholders. The actual libraries are NOT committed to keep repo size small.
+# For production deployment, run the download script during build/deployment process.

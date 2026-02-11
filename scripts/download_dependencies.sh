@@ -59,6 +59,6 @@ echo ""
 echo "✅ Download complete! Your app should now work offline."
 echo ""
 echo "To use these files, make sure your HTML loads from local paths:"
-echo '  <script src="{{ url_for('"'"'static'"'"', filename='"'"'js/d3.min.js'"'"') }}"></script>'
-echo '  <script src="{{ url_for('"'"'static'"'"', filename='"'"'js/topojson.min.js'"'"') }}"></script>'
+echo '  <script src="/static/js/d3.min.js"></script>'
+echo '  <script src="/static/js/topojson.min.js"></script>'
 echo ""
