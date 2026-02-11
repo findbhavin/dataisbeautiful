@@ -670,16 +670,24 @@ class MapVisualizer {
 
 // Initialize the map when libraries are ready
 (function initializeWhenReady() {
+    const MAX_CHECKS = 30; // 30 * 100ms = 3 seconds timeout
+    const CHECK_INTERVAL = 100; // ms
+    let checkCount = 0;
+
     const checkLibraries = () => {
+        checkCount++;
         const d3Ready = typeof d3 !== 'undefined' && d3.version;
         const topojsonReady = typeof topojson !== 'undefined';
         
         if (d3Ready && topojsonReady) {
             console.log('[MapVisualizer] Libraries confirmed available, initializing...');
             initializeMap();
+        } else if (checkCount >= MAX_CHECKS) {
+            console.error('[MapVisualizer] Libraries failed to load after ' + (MAX_CHECKS * CHECK_INTERVAL / 1000) + ' seconds');
+            showLoadError();
         } else {
             // Check again after a short delay
-            setTimeout(checkLibraries, 100);
+            setTimeout(checkLibraries, CHECK_INTERVAL);
         }
     };
 
@@ -695,6 +703,21 @@ class MapVisualizer {
         } catch (error) {
             console.error('Failed to initialize MapVisualizer:', error);
             visualizer.showError('Failed to load visualization. Please refresh the page.');
+        }
+    };
+
+    const showLoadError = () => {
+        const container = document.getElementById('map-svg-container');
+        if (container) {
+            container.innerHTML = `
+                <div class="loading">
+                    <div style="text-align: center;">
+                        <h2>⚠️ Visualization Unavailable</h2>
+                        <p>Required libraries failed to load. Please refresh the page.</p>
+                        <button onclick="location.reload()">Refresh Page</button>
+                    </div>
+                </div>
+            `;
         }
     };
 
