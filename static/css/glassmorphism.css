@@ -139,11 +139,26 @@ button:active {
     padding: 0 20px;
 }
 
+/* Enhanced Map Container - ensure glass wrapper has height for map */
+.map-container .glass-container {
+    min-height: 660px; /* 600px map + 60px padding (30px * 2) */
+}
+
 #map-svg-container {
     width: 100%;
     min-height: 600px;
     border-radius: 20px;
     overflow: hidden;
+    display: block;        /* Ensure block display */
+    position: relative;    /* Establish positioning context */
+}
+
+/* Ensure SVG is always visible and properly sized */
+#map-svg-container svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-height: 600px;
 }
 
 #map {
@@ -308,6 +323,15 @@ button:active {
     
     .stat-value {
         font-size: 2rem;
+    }
+    
+    /* Maintain map visibility on mobile */
+    #map-svg-container {
+        min-height: 400px; /* Smaller but still visible on mobile */
+    }
+    
+    .map-container .glass-container {
+        min-height: 460px; /* 400px + 60px padding */
     }
 }
 
