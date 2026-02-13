@@ -17,7 +17,9 @@ class MapVisualizer {
         this.containerId = containerId;
         this.data = null;
         this.currentMetric = 'total_subscribers';
+        this.mapMode = 'subscribers';  // 'subscribers' | 'data-centers' | 'hub-pairs'
         this.colorScale = null;
+        this.statesFeatures = null;  // Store for re-styling in different modes
         this.projection = null;
         this.path = null;
         this.svg = null;
@@ -34,7 +36,8 @@ class MapVisualizer {
         this.height = 600;
         
         // Constants for label rendering
-        this.BASE_LABEL_FONT_SIZE = 12;  // Base font size for state labels
+        this.BASE_LABEL_FONT_SIZE = 10;  // Base font size for metric value
+        this.STATE_NAME_FONT_SIZE = 7;   // Small font for state name
         this.OTHERS_AVG_STATE_ISO = 'OTH';  // ISO code for "Others (Avg)" to exclude from map
         
         // Constants for state styling
@@ -234,6 +237,9 @@ class MapVisualizer {
             // Setup color scale based on current metric
             this.updateColorScale();
             
+            // Store features for mode-based re-styling
+            this.statesFeatures = states.features;
+            
             // Draw states with proper data matching
             this.debugLog(`[MapVisualizer] Drawing states with styling: stroke=${this.STATE_STROKE_COLOR}, stroke-width=${this.STATE_STROKE_WIDTH}, fill-opacity=${this.STATE_FILL_OPACITY}`);
             const statePaths = this.g.selectAll('.state')
@@ -241,17 +247,7 @@ class MapVisualizer {
                 .join('path')
                 .attr('class', 'state')
                 .attr('d', this.path)
-                .attr('fill', d => {
-                    const stateData = this.getStateDataForFeature(d);
-                    if (!stateData) {
-                        // Use neutral fill for states without data
-                        this.debugLog('[MapVisualizer] State without data, using neutral color:', d);
-                        return '#e2e8f0';
-                    }
-                    const color = this.colorScale(stateData[this.currentMetric]);
-                    this.debugLog(`[MapVisualizer] State ${stateData.state_iso} (${stateData.state_name}): value=${stateData[this.currentMetric]}, color=${color}`);
-                    return color;
-                })
+                .attr('fill', d => this.getStateFill(d))
                 .attr('stroke', this.STATE_STROKE_COLOR)
                 .attr('stroke-width', this.STATE_STROKE_WIDTH)
                 .style('fill-opacity', this.STATE_FILL_OPACITY)
@@ -268,6 +264,9 @@ class MapVisualizer {
             
             // Render state labels using lat/long coordinates
             this.renderStateLabels();
+            
+            // Render hub pairs if in that mode
+            if (this.mapMode === 'hub-pairs') this.renderHubPairsDots();
             
             // Update legend
             this.updateLegend();
@@ -379,26 +378,50 @@ class MapVisualizer {
         return null;
     }
     
+    /**
+     * Get fill color for a state feature based on current map mode.
+     */
+    getStateFill(d) {
+        if (this.mapMode === 'data-centers') {
+            const stateValues = window.__dataCentersStateValues || {};
+            const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
+            const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
+            const value = iso ? (stateValues[iso] || '').trim() : '';
+            if (!value || value === 'None') return '#e2e8f0';
+            if (/super\s*core/i.test(value)) return '#0868ac';
+            return '#43a2ca';
+        }
+        if (this.mapMode === 'hub-pairs') {
+            return '#e2e8f0';
+        }
+        const stateData = this.getStateDataForFeature(d);
+        if (!stateData) return '#e2e8f0';
+        return this.colorScale(stateData[this.currentMetric]);
+    }
+    
     renderStateLabels() {
         /**
          * Render text labels on each state using latitude/longitude coordinates.
          * Labels show the current metric value for each state.
          * Excludes "Others (Avg)" from display as per requirements.
+         * In data-centers/hub-pairs mode, labels are hidden.
          */
         
         // Remove any existing labels
         this.g.selectAll('.state-label').remove();
         
+        if (this.mapMode !== 'subscribers') return;
+        
         // Get state data excluding "Others (Avg)"
         const stateData = this.data.by_state.filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO);
         
-        // Add labels for each state using lat/long coordinates
+        // Add labels for each state: state name (small) + subscriber value
+        const mapviz = this;
         const labels = this.g.selectAll('.state-label')
             .data(stateData)
             .join('text')
             .attr('class', 'state-label')
             .attr('x', d => {
-                // Convert lat/long to screen coordinates using projection
                 const coords = this.projection([d.longitude, d.latitude]);
                 return coords ? coords[0] : 0;
             })
@@ -415,9 +438,16 @@ class MapVisualizer {
             .style('stroke-width', '0.5px')
             .style('paint-order', 'stroke')
             .style('pointer-events', 'none')
-            .text(d => {
-                const value = d[this.currentMetric];
-                return this.formatValue(value);
+            .each(function(d) {
+                const value = d[mapviz.currentMetric];
+                const stateName = d.state_name || d.state_iso || '';
+                const valueStr = mapviz.formatValue(value);
+                const tspan = d3.select(this);
+                tspan.append('tspan').attr('x', tspan.attr('x')).attr('dy', '-0.4em')
+                    .style('font-size', '0.7em').style('font-weight', 'normal')
+                    .text(stateName);
+                tspan.append('tspan').attr('x', tspan.attr('x')).attr('dy', '1.1em')
+                    .text(valueStr);
             });
         
         // Store reference to labels for zoom updates
@@ -425,18 +455,10 @@ class MapVisualizer {
     }
     
     updateStateLabels() {
-        /**
-         * Update state labels with new metric values and handle zoom-based visibility.
-         */
         if (!this.labels || this.labels.empty()) return;
-        
-        this.labels
-            .transition()
-            .duration(500)
-            .text(d => {
-                const value = d[this.currentMetric];
-                return this.formatValue(value);
-            });
+        this.labels.selectAll('tspan:last-child')
+            .transition().duration(500)
+            .text(d => this.formatValue(d[this.currentMetric]));
     }
     
     getStateDataById(stateId) {
@@ -466,14 +488,32 @@ class MapVisualizer {
     
     updateLegend() {
         const legendContainer = d3.select('#legend-scale');
+        const minLabel = d3.select('#legend-min');
+        const maxLabel = d3.select('#legend-max');
         if (legendContainer.empty()) return;
         
         legendContainer.selectAll('*').remove();
         
+        if (this.mapMode === 'data-centers') {
+            legendContainer.append('div').style('background-color', '#0868ac').style('flex', '1').style('height', '100%').style('min-width', '60px');
+            legendContainer.append('div').style('background-color', '#43a2ca').style('flex', '1').style('height', '100%').style('min-width', '60px');
+            legendContainer.append('div').style('background-color', '#e2e8f0').style('flex', '1').style('height', '100%').style('min-width', '60px');
+            legendContainer.style('display', 'flex');
+            if (!minLabel.empty()) minLabel.text('Super Core');
+            if (!maxLabel.empty()) maxLabel.text('No DC');
+            return;
+        }
+        if (this.mapMode === 'hub-pairs') {
+            legendContainer.append('div').style('background-color', '#e2e8f0').style('flex', '1').style('height', '100%');
+            if (!minLabel.empty()) minLabel.text('Hub pairs');
+            if (!maxLabel.empty()) maxLabel.text('');
+            return;
+        }
+        
         const legendWidth = legendContainer.node().clientWidth;
         const segmentWidth = legendWidth / this.colorScheme.length;
         
-        this.colorScheme.forEach((color, i) => {
+        this.colorScheme.forEach((color) => {
             legendContainer.append('div')
                 .style('background-color', color)
                 .style('width', `${segmentWidth}px`)
@@ -481,19 +521,44 @@ class MapVisualizer {
                 .style('display', 'inline-block');
         });
         
-        // Update legend labels
         const values = this.data.by_state
             .filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO)
             .map(d => d[this.currentMetric]);
-        
         const extent = d3.extent(values);
-        const minLabel = d3.select('#legend-min');
-        const maxLabel = d3.select('#legend-max');
-        
         if (!minLabel.empty() && !maxLabel.empty()) {
             minLabel.text(this.formatValue(extent[0]));
             maxLabel.text(this.formatValue(extent[1]));
         }
+    }
+    
+    clearHubPairsDots() {
+        this.g.selectAll('.hub-dots-layer').remove();
+    }
+    
+    renderHubPairsDots() {
+        this.clearHubPairsDots();
+        const pairs = window.__hubPairs || [];
+        if (pairs.length === 0) return;
+        const layer = this.g.append('g').attr('class', 'hub-dots-layer');
+        pairs.forEach(p => {
+            const p1 = this.projection(p.c1);
+            const p2 = this.projection(p.c2);
+            if (p1 && p2) {
+                layer.append('line')
+                    .attr('x1', p1[0]).attr('y1', p1[1]).attr('x2', p2[0]).attr('y2', p2[1])
+                    .attr('stroke', p.color).attr('stroke-width', 2).attr('stroke-opacity', 0.6);
+            }
+            if (p1) {
+                layer.append('circle')
+                    .attr('cx', p1[0]).attr('cy', p1[1])
+                    .attr('r', 5).attr('fill', p.color).attr('stroke', '#1f2937').attr('stroke-width', 1);
+            }
+            if (p2) {
+                layer.append('circle')
+                    .attr('cx', p2[0]).attr('cy', p2[1])
+                    .attr('r', 5).attr('fill', p.color).attr('stroke', '#1f2937').attr('stroke-width', 1);
+            }
+        });
     }
     
     handleMouseOver(event, d) {
@@ -612,6 +677,25 @@ class MapVisualizer {
         }
     }
     
+    applyMapMode(mode) {
+        this.mapMode = mode;
+        const metricGroup = document.getElementById('metric-control-group');
+        if (metricGroup) metricGroup.style.display = mode === 'subscribers' ? '' : 'none';
+        
+        this.g.selectAll('.state')
+            .transition().duration(500)
+            .attr('fill', d => this.getStateFill(d));
+        
+        if (mode === 'hub-pairs') {
+            this.renderHubPairsDots();
+        } else {
+            this.clearHubPairsDots();
+        }
+        
+        this.renderStateLabels();
+        this.updateLegend();
+    }
+    
     changeMetric(metric) {
         this.debugLog(`[MapVisualizer] Changing metric from '${this.currentMetric}' to '${metric}'`);
         this.currentMetric = metric;
@@ -623,11 +707,7 @@ class MapVisualizer {
         this.g.selectAll('.state')
             .transition()
             .duration(750)
-            .attr('fill', d => {
-                const stateData = this.getStateDataForFeature(d);
-                if (!stateData) return '#cccccc';
-                return this.colorScale(stateData[this.currentMetric]);
-            })
+            .attr('fill', d => this.getStateFill(d))
             .attr('stroke', this.STATE_STROKE_COLOR)
             .attr('stroke-width', this.STATE_STROKE_WIDTH)
             .style('fill-opacity', this.STATE_FILL_OPACITY);
@@ -645,6 +725,14 @@ class MapVisualizer {
     }
     
     setupEventListeners() {
+        // Map mode selector
+        const mapModeSelect = document.getElementById('map-mode-select');
+        if (mapModeSelect) {
+            mapModeSelect.addEventListener('change', (e) => {
+                this.applyMapMode(e.target.value);
+            });
+        }
+        
         // Metric selector
         const metricSelect = document.getElementById('metric-select');
         if (metricSelect) {
@@ -722,6 +810,7 @@ class MapVisualizer {
 
     const initializeMap = async () => {
         const visualizer = new MapVisualizer('map-svg-container');
+        window.__mapVisualizer = visualizer;
         
         try {
             // Show loading state
@@ -729,6 +818,13 @@ class MapVisualizer {
             
             await visualizer.initialize();
             visualizer.debugLog('MapVisualizer initialized successfully');
+            if (window.__pendingMapMode) {
+                const mode = window.__pendingMapMode;
+                delete window.__pendingMapMode;
+                const modeSel = document.getElementById('map-mode-select');
+                if (modeSel) modeSel.value = mode;
+                visualizer.applyMapMode(mode);
+            }
         } catch (error) {
             console.error('Failed to initialize MapVisualizer:', error);
             visualizer.showError('Failed to load visualization. Please refresh the page.');

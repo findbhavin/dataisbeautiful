@@ -147,7 +147,7 @@ async function renderMetrosBar(containerId, data) {
 
     const maxTotal = d3.max(metros, d => d.total) * 1.05;
     const x = d3.scaleLinear().domain([0, maxTotal]).range([0, width]);
-    const y = d3.scaleBand().domain(metros.map(d => d.metro)).range([0, height]).padding(0.25);
+    const y = d3.scaleBand().domain(metros.map(d => d.metro)).range([0, height]).padding(0.5);
 
     const stack = d3.stack().keys(keys).order(d3.stackOrderNone);
     const stacked = stack(metros);
@@ -172,6 +172,20 @@ async function renderMetrosBar(containerId, data) {
             })
             .transition().duration(400).delay((d, j) => j * 30)
             .attr('width', d => x(d[1]) - x(d[0]));
+    });
+
+    const isLight = document.body.classList.contains('theme-light');
+    const labelFill = isLight ? '#1e293b' : '#fff';
+    stacked.forEach((layer, i) => {
+        const key = keys[i];
+        svg.selectAll(`text.metro-${key}`).data(layer.filter(d => (d[1] - d[0]) > 1.5)).join('text')
+            .attr('class', `metro-${key}`)
+            .attr('x', d => x(d[0]) + (x(d[1]) - x(d[0])) / 2)
+            .attr('y', d => y(d.data.metro) + y.bandwidth() / 2)
+            .attr('dy', '0.35em').attr('text-anchor', 'middle')
+            .attr('fill', labelFill).attr('font-size', 10).attr('font-weight', 600)
+            .text(d => d.data[key] >= 0.5 ? d.data[key].toFixed(1) : '')
+            .style('opacity', 0).transition().delay(500).style('opacity', 1);
     });
 
     svg.append('g').attr('transform', `translate(0,${height})`).attr('font-size', 13).call(d3.axisBottom(x).ticks(5).tickFormat(d => d + 'M'));
@@ -229,6 +243,12 @@ async function renderSpectrumBar(containerId, data) {
                 });
             rect.transition().duration(400).delay(i * 80)
                 .attr('height', h);
+            g.append('text').attr('class', 'spectrum-value')
+                .attr('x', x1(key) + x1.bandwidth() / 2).attr('y', y(band[key]) - 4)
+                .attr('text-anchor', 'middle').attr('font-size', 10).attr('font-weight', 600)
+                .attr('fill', document.body.classList.contains('theme-light') ? '#1e293b' : '#fff')
+                .text(band[key])
+                .style('opacity', 0).transition().delay(450 + i * 80).style('opacity', 1);
         });
     });
 
@@ -365,7 +385,7 @@ async function renderTopStatesBar(containerId, data, operatorKey) {
     svg.append('g').attr('font-size', 13).call(d3.axisLeft(y).tickSize(0));
 }
 
-// Table input: parse CSV or JSON and render horizontal bar chart
+// Table input: parse CSV or JSON, show full table + optional bar chart
 function parseTableInput() {
     const textarea = document.getElementById('table-input-area');
     const output = document.getElementById('table-output-viz');
@@ -386,7 +406,7 @@ function parseTableInput() {
             for (let i = 1; i < lines.length; i++) {
                 const vals = lines[i].split(/[,;\t]/).map(v => v.trim());
                 const obj = {};
-                headers.forEach((h, j) => { obj[h] = isNaN(vals[j]) ? vals[j] : parseFloat(vals[j]); });
+                headers.forEach((h, j) => { obj[h] = vals[j] === '' || isNaN(vals[j]) ? vals[j] : parseFloat(vals[j]); });
                 rows.push(obj);
             }
         }
@@ -399,22 +419,50 @@ function parseTableInput() {
         return;
     }
     const keys = Object.keys(rows[0]);
-    const labelKey = keys.find(k => typeof rows[0][k] === 'string' || isNaN(rows[0][k])) || keys[0];
-    const valueKey = keys.find(k => k !== labelKey && !isNaN(rows[0][k])) || keys[1];
-    const margin = { top: 20, right: 50, bottom: 30, left: Math.min(150, 12 * Math.max(...rows.map(d => String(d[labelKey]).length))) };
-    const width = 600 - margin.left - margin.right;
-    const height = Math.min(400, rows.length * 28);
-    const svg = d3.select('#table-output-viz').append('svg').attr('width', width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom)
-        .append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-    const y = d3.scaleBand().domain(rows.map(d => String(d[labelKey]))).range([0, height]).padding(0.2);
-    const x = d3.scaleLinear().domain([0, d3.max(rows, d => +d[valueKey] || 0)]).range([0, width]);
-    svg.selectAll('rect').data(rows).join('rect')
-        .attr('y', d => y(String(d[labelKey]))).attr('height', y.bandwidth())
-        .attr('x', 0).attr('width', d => x(+d[valueKey] || 0))
-        .attr('fill', '#4292c6').attr('rx', 3);
-    svg.append('g').attr('transform', `translate(0,${height})`).call(d3.axisBottom(x));
-    svg.append('g').call(d3.axisLeft(y).tickSize(0));
-    output.insertAdjacentHTML('afterbegin', '<p class="success">Parsed ' + rows.length + ' rows. Label: ' + labelKey + ', Value: ' + valueKey + '</p>');
+    const labelKey = keys.find(k => typeof rows[0][k] === 'string' || (rows[0][k] !== '' && isNaN(rows[0][k]))) || keys[0];
+    const numericKeys = keys.filter(k => k !== labelKey && !isNaN(rows[0][k]));
+    const valueKey = numericKeys[0] || keys[1];
+
+    let html = '<p class="success">Parsed ' + rows.length + ' rows, ' + keys.length + ' columns.</p>';
+    html += '<div class="table-viz-controls"><label>Label column:</label><select id="table-label-col">';
+    keys.forEach(k => html += '<option value="' + k + '"' + (k === labelKey ? ' selected' : '') + '>' + k + '</option>');
+    html += '</select><label>Value column:</label><select id="table-value-col">';
+    keys.forEach(k => html += '<option value="' + k + '"' + (k === valueKey ? ' selected' : '') + '>' + k + '</option>');
+    html += '</select><button id="table-redraw-chart">Redraw Chart</button></div>';
+
+    html += '<div class="table-data-scroll"><table class="parsed-data-table"><thead><tr>';
+    keys.forEach(k => html += '<th>' + k + '</th>');
+    html += '</tr></thead><tbody>';
+    rows.forEach(row => {
+        html += '<tr>';
+        keys.forEach(k => html += '<td>' + (row[k] !== undefined && row[k] !== null ? row[k] : '') + '</td>');
+        html += '</tr>';
+    });
+    html += '</tbody></table></div><div id="table-chart-container"></div>';
+    output.innerHTML = html;
+
+    function drawChart() {
+        const lbl = document.getElementById('table-label-col')?.value || labelKey;
+        const val = document.getElementById('table-value-col')?.value || valueKey;
+        const container = document.getElementById('table-chart-container');
+        if (!container) return;
+        container.innerHTML = '';
+        const margin = { top: 20, right: 50, bottom: 30, left: Math.min(180, 10 * Math.max(...rows.map(d => String(d[lbl] || '').length))) };
+        const width = 600 - margin.left - margin.right;
+        const height = Math.min(400, rows.length * 26);
+        const svg = d3.select('#table-chart-container').append('svg').attr('width', width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom)
+            .append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+        const y = d3.scaleBand().domain(rows.map(d => String(d[lbl] || ''))).range([0, height]).padding(0.2);
+        const x = d3.scaleLinear().domain([0, d3.max(rows, d => +d[val] || 0) * 1.05]).range([0, width]);
+        svg.selectAll('rect').data(rows).join('rect')
+            .attr('y', d => y(String(d[lbl] || ''))).attr('height', y.bandwidth())
+            .attr('x', 0).attr('width', d => x(+d[val] || 0))
+            .attr('fill', '#4292c6').attr('rx', 3);
+        svg.append('g').attr('transform', `translate(0,${height})`).call(d3.axisBottom(x));
+        svg.append('g').call(d3.axisLeft(y).tickSize(0));
+    }
+    drawChart();
+    document.getElementById('table-redraw-chart')?.addEventListener('click', drawChart);
 }
 
 async function loadMarketShare() {

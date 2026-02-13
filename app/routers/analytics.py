@@ -43,6 +43,15 @@ async def get_revenue_by_state() -> Dict[str, Any]:
     return _load_json("revenue_by_state.json")
 
 
+@router.get("/city-coordinates")
+async def get_city_coordinates() -> Dict[str, Any]:
+    """City name to [lng, lat] for Hub Pair map."""
+    try:
+        return _load_json("city_coordinates.json")
+    except HTTPException:
+        return {}
+
+
 @router.get("/datasets")
 async def list_datasets() -> Dict[str, Any]:
     """List available datasets for table input / visualization."""
