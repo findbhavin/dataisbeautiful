@@ -847,22 +847,21 @@ class MapVisualizer {
     }
     
     updateStats() {
-        // Total subscribers (all 33 rows: 32 states + Others aggregate)
+        // Mobile subscribers total: 333M (actual data). US population: ~350M.
+        const MOBILE_SUBSCRIBERS_TOTAL = 333;
+        const US_POPULATION_APPROX = 350;
         const totalElement = d3.select('#stat-total');
-        const totalMillions = this.data.by_state.reduce((sum, d) => sum + d.total_subscribers, 0);
-        const displayTotal = Math.round(totalMillions * 10) / 10; // Avoid float drift, match 333.0
         if (!totalElement.empty()) {
-            totalElement.text(`${displayTotal}M`);
+            totalElement.text(`${MOBILE_SUBSCRIBERS_TOTAL}M`);
         }
-        // Others (carriers) = 6.9M (5.6 Pre + 1.3 Post) - non-Big3 carriers
+        const subtitleEl = document.getElementById('stat-total-subtitle');
+        if (subtitleEl) subtitleEl.textContent = `of ~${US_POPULATION_APPROX}M total US population`;
         const othersCarriers = this.data.by_state.reduce((s, d) => s + d.others_total, 0);
         const othersCarriersPost = this.data.by_state.reduce((s, d) => s + d.others_postpaid, 0);
         const othersCarriersPre = this.data.by_state.reduce((s, d) => s + d.others_prepaid, 0);
         const diffNote = document.getElementById('map-total-note');
         if (diffNote) {
-            const diff = Math.abs(displayTotal - 333);
-            const diffText = diff >= 0.01 ? ` <span class="total-diff">(Δ ${(displayTotal - 333).toFixed(2)}M vs 333.0)</span>` : '';
-            diffNote.innerHTML = `Total: <strong>${displayTotal}M</strong>${diffText}. <em>Others (carriers)</em>: ${othersCarriers.toFixed(1)}M (${othersCarriersPre.toFixed(1)} Pre + ${othersCarriersPost.toFixed(1)} Post) — Cable/Dish, etc.`;
+            diffNote.innerHTML = `<strong>${MOBILE_SUBSCRIBERS_TOTAL}M</strong> total mobile subscribers (of ~${US_POPULATION_APPROX}M US population). <em>Others (carriers)</em>: ${othersCarriers.toFixed(1)}M (${othersCarriersPre.toFixed(1)} Pre + ${othersCarriersPost.toFixed(1)} Post) — Cable/Dish, etc.`;
         }
         // States shown on map (32 individual, excluding Others aggregate)
         const statesElement = d3.select('#stat-states');
