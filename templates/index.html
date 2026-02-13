@@ -7,21 +7,29 @@
     
     <!-- Glassmorphism CSS -->
     <link rel="stylesheet" href="/static/css/glassmorphism.css">
+    <link rel="stylesheet" href="/static/css/light-theme.css">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="theme-light">
     <!-- Header -->
     <div class="header">
         <h1>MapVisual Engine</h1>
         <p>Interactive US Mobile Subscribers Visualization</p>
     </div>
     
+    <!-- Page Switcher -->
+    <nav class="page-nav glass-container fade-in">
+        <button class="page-btn active" data-page="map">Map</button>
+        <button class="page-btn" data-page="data">Data &amp; Others</button>
+        <button class="page-btn" data-page="analytics">Analytics</button>
+    </nav>
+    
     <!-- Stats Panel -->
-    <div class="stats-panel">
+    <div class="stats-panel page-section active" data-page="map">
         <div class="glass-container stats-grid fade-in">
             <div class="stat-card">
                 <div class="stat-value" id="stat-total">-</div>
@@ -29,22 +37,42 @@
             </div>
             <div class="stat-card">
                 <div class="stat-value" id="stat-states">-</div>
-                <div class="stat-label">States Covered</div>
+                <div class="stat-label">States Shown on Map</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value">4</div>
-                <div class="stat-label">Carriers (3 Major + Others*)</div>
+                <div class="stat-value">32+19</div>
+                <div class="stat-label">States (32 shown + 19 in Others)</div>
             </div>
         </div>
     </div>
     
-    <!-- Others Disclaimer -->
-    <div class="info-banner glass-container fade-in">
-        <strong>Note on "Others":</strong> The "Others" category represents Cable (Xfinity/Spectrum), Dish, MVNOs, and resellers—not the same as Verizon, T-Mobile, or AT&T. These operators have different characteristics: high growth, lower ARPU (~$35), and aggressive bundling. Subscriber and revenue metrics are not directly comparable to the three major carriers.
+    <!-- Others Data Note + Data Card (Data page) -->
+    <div class="info-banner glass-container fade-in page-section" data-page="data">
+        <strong>Note on "Others":</strong> The "Others" row is the <strong>aggregate of the remaining 19 states</strong> (beyond the top 32) for which individual data is not shown on the map. It represents ~52.1M subscribers across those states (AR, KS, NM, NE, ID, WV, HI, NH, ME, MT, RI, DE, SD, ND, AK, VT, WY, DC, etc.).
+    </div>
+    <div class="others-data-card glass-container fade-in page-section" data-page="data">
+        <h4>Others (19 states) — Key Values</h4>
+        <div class="data-values-grid">
+            <div class="data-value-item"><span class="data-value">52.1M</span><span class="data-label">Total</span></div>
+            <div class="data-value-item"><span class="data-value">41.7M</span><span class="data-label">Postpaid</span></div>
+            <div class="data-value-item"><span class="data-value">10.4M</span><span class="data-label">Prepaid</span></div>
+            <div class="data-value-item"><span class="data-value">15.5M</span><span class="data-label">Verizon</span></div>
+            <div class="data-value-item"><span class="data-value">18.9M</span><span class="data-label">T-Mobile</span></div>
+            <div class="data-value-item"><span class="data-value">16.4M</span><span class="data-label">AT&amp;T</span></div>
+            <div class="data-value-item"><span class="data-value">1.3M</span><span class="data-label">Others (carriers)</span></div>
+        </div>
+    </div>
+    
+    <!-- Data Table (Data page) -->
+    <div class="data-table-section page-section" data-page="data">
+        <div class="glass-container fade-in">
+            <h3>State-by-State Data (32 states + Others aggregate)</h3>
+            <div id="data-table-container"></div>
+        </div>
     </div>
     
     <!-- Controls Section -->
-    <div class="controls-section">
+    <div class="controls-section page-section active" data-page="map">
         <div class="glass-container controls-grid fade-in">
             <div class="control-group">
                 <label class="control-label" for="metric-select">Select Metric</label>
@@ -74,10 +102,9 @@
         </div>
     </div>
     
-    <!-- Dashboard Tabs -->
-    <div class="dashboard-tabs glass-container fade-in">
-        <button class="tab-btn active" data-tab="map">US Map</button>
-        <button class="tab-btn" data-tab="market-share">Market Share</button>
+    <!-- Dashboard Tabs (Analytics page) -->
+    <div class="dashboard-tabs glass-container fade-in page-section" data-page="analytics">
+        <button class="tab-btn active" data-tab="market-share">Market Share</button>
         <button class="tab-btn" data-tab="metros">Top Metros</button>
         <button class="tab-btn" data-tab="spectrum">Spectrum</button>
         <button class="tab-btn" data-tab="revenue">Revenue by State</button>
@@ -85,8 +112,8 @@
         <button class="tab-btn" data-tab="table-input">Table Input</button>
     </div>
     
-    <!-- Map Container -->
-    <div class="map-container tab-content active" id="tab-map">
+    <!-- Map Container (Map page) -->
+    <div class="map-container tab-content page-section active" id="tab-map" data-page="map">
         <div class="glass-container fade-in">
             <div id="map-svg-container">
                 <div class="loading">
@@ -97,38 +124,38 @@
         </div>
     </div>
     
-    <!-- Chart Panels (hidden by default) -->
-    <div class="chart-panel tab-content" id="tab-market-share">
+    <!-- Chart Panels (Analytics page) -->
+    <div class="chart-panel tab-content active page-section" id="tab-market-share" data-page="analytics">
         <div class="glass-container fade-in">
             <h3>Subscriber Share by Carrier</h3>
             <div id="chart-market-share"></div>
         </div>
     </div>
-    <div class="chart-panel tab-content" id="tab-metros">
+    <div class="chart-panel tab-content page-section" id="tab-metros" data-page="analytics">
         <div class="glass-container fade-in">
             <h3>Top 10 US Metro Areas by Carrier (Millions)</h3>
             <div id="chart-metros"></div>
         </div>
     </div>
-    <div class="chart-panel tab-content" id="tab-spectrum">
+    <div class="chart-panel tab-content page-section" id="tab-spectrum" data-page="analytics">
         <div class="glass-container fade-in">
             <h3>Estimated Sub-6 GHz Spectrum Depth by Band (2026)</h3>
             <div id="chart-spectrum"></div>
         </div>
     </div>
-    <div class="chart-panel tab-content" id="tab-revenue">
+    <div class="chart-panel tab-content page-section" id="tab-revenue" data-page="analytics">
         <div class="glass-container fade-in">
             <h3>Estimated 2025 Annual Wireless Service Revenue by State</h3>
             <div id="chart-revenue"></div>
         </div>
     </div>
-    <div class="chart-panel tab-content" id="tab-top-states">
+    <div class="chart-panel tab-content page-section" id="tab-top-states" data-page="analytics">
         <div class="glass-container fade-in">
             <h3>Top 10 States by Customer Base</h3>
             <div id="chart-top-states"></div>
         </div>
     </div>
-    <div class="chart-panel tab-content" id="tab-table-input">
+    <div class="chart-panel tab-content page-section" id="tab-table-input" data-page="analytics">
         <div class="glass-container fade-in">
             <h3>Paste Table Data (CSV or JSON)</h3>
             <p class="help-text">Paste tabular data below. Supports CSV (comma-separated) or JSON array of objects. The app will infer columns and suggest visualizations.</p>
@@ -139,7 +166,7 @@
     </div>
     
     <!-- Legend -->
-    <div class="legend" id="legend-map">
+    <div class="legend page-section active" id="legend-map" data-page="map">
         <div class="glass-panel fade-in">
             <div class="legend-title">Color Scale</div>
             <div class="legend-scale" id="legend-scale"></div>
@@ -229,7 +256,24 @@
                 await waitForLibraries();
                 console.log('🚀 Ready to initialize map visualization');
                 
-                // Tab switching
+                // Page switching
+                document.querySelectorAll('.page-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.page-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        const page = btn.dataset.page;
+                        document.querySelectorAll('.page-section').forEach(s => {
+                            s.classList.toggle('active', s.dataset.page === page);
+                        });
+                        document.getElementById('legend-map').style.display = (page === 'map') ? 'block' : 'none';
+                        if (page === 'data') loadDataTable();
+                        if (page === 'analytics') {
+                            document.querySelector('.tab-btn.active')?.click();
+                        }
+                    });
+                });
+                
+                // Tab switching (within Analytics page)
                 document.querySelectorAll('.tab-btn').forEach(btn => {
                     btn.addEventListener('click', () => {
                         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -251,6 +295,38 @@
                 
                 // Table input handler
                 document.getElementById('table-parse-btn')?.addEventListener('click', parseTableInput);
+                
+                // Load data table when Data page is first shown
+                function loadDataTable() {
+                    const container = document.getElementById('data-table-container');
+                    if (!container || container.dataset.loaded === 'true') return;
+                    fetch('/api/mobile/data').then(r => r.json()).then(data => {
+                        if (!data.by_state || data.by_state.length === 0) {
+                            container.innerHTML = '<p>No data available.</p>';
+                            return;
+                        }
+                        const cols = ['state_name', 'total_subscribers', 'total_postpaid', 'total_prepaid', 'verizon_total', 'tmobile_total', 'att_total', 'others_total'];
+                        const headers = ['State', 'Total', 'Postpaid', 'Prepaid', 'Verizon', 'T-Mobile', 'AT&T', 'Others'];
+                        let html = '<table class="data-table"><thead><tr>';
+                        headers.forEach(h => html += '<th>' + h + '</th>');
+                        html += '</tr></thead><tbody>';
+                        data.by_state.forEach(row => {
+                            html += '<tr>';
+                            html += '<td><strong>' + (row.state_name || row.state_iso) + '</strong></td>';
+                            cols.slice(1).forEach((c, i) => {
+                                const v = row[c];
+                                const fmt = typeof v === 'number' ? (v >= 1 ? v.toFixed(1) + 'M' : v.toFixed(2)) : (v || '-');
+                                html += '<td class="data-value-cell">' + fmt + '</td>';
+                            });
+                            html += '</tr>';
+                        });
+                        html += '</tbody></table>';
+                        container.innerHTML = html;
+                        container.dataset.loaded = 'true';
+                    }).catch(e => {
+                        container.innerHTML = '<p class="error">Failed to load data: ' + e.message + '</p>';
+                    });
+                }
             } catch (error) {
                 console.error('Failed to load required libraries:', error);
                 console.error('Using fallback visualization...');

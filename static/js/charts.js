@@ -8,13 +8,13 @@
  */
 
 const ChartColors = {
-    verizon: '#cd040b',
-    tmobile: '#e20074',
-    att: '#00a8e0',
-    others: '#6b7280',
-    neutral: ['#7eb5d3', '#5a9fc9', '#4287b8', '#2d6ba3', '#1a4d7a'],
-    // ColorBrewer YlGnBu-inspired (colorblind-friendly sequential)
-    sequential: ['#edf8b1', '#c7e9b4', '#7fcdbb', '#41b6c4', '#2c7fb8', '#253494']
+    verizon: '#dc2626',
+    tmobile: '#db2777',
+    att: '#0284c7',
+    others: '#64748b',
+    neutral: ['#93c5fd', '#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8'],
+    // Lighter sequential for density (light theme)
+    sequential: ['#e0f2fe', '#7dd3fc', '#38bdf8', '#0ea5e9', '#0284c7', '#0369a1']
 };
 
 // Shared chart tooltip
@@ -33,7 +33,11 @@ function chartTooltip() {
 
 function showTooltip(event, html) {
     const tip = chartTooltip();
+    const isLight = document.body.classList.contains('theme-light');
     tip.html(html).style('opacity', 1)
+        .style('background', isLight ? 'rgba(30,41,59,0.95)' : 'rgba(0,0,0,0.9)')
+        .style('color', '#fff')
+        .style('font-size', '13px')
         .style('left', (event.pageX + 12) + 'px')
         .style('top', (event.pageY - 8) + 'px');
 }
@@ -81,19 +85,21 @@ async function renderMarketSharePie(containerId, data) {
             return t => arc(i(t));
         });
 
+    const isLight = document.body.classList.contains('theme-light');
+    const labelFill = isLight ? '#1e293b' : '#fff';
     arcs.filter(d => (d.endAngle - d.startAngle) > 0.15).append('text')
         .attr('transform', d => `translate(${arcLabel.centroid(d)})`)
-        .attr('text-anchor', 'middle').attr('fill', '#fff').attr('font-size', 11).attr('font-weight', 600)
+        .attr('text-anchor', 'middle').attr('fill', labelFill).attr('font-size', 13).attr('font-weight', 700)
         .text(d => `${d.data.subscriber_share_pct}%`)
         .style('opacity', 0).transition().delay(400).style('opacity', 1);
 
-    // Center label: total subscribers
+    // Center label: total subscribers (data-first: prominent values)
     const totalSubs = data.market_share.reduce((s, d) => s + d.subscriber_share_pct, 0);
     svg.append('text').attr('text-anchor', 'middle').attr('dy', '-0.3em')
-        .attr('fill', '#fff').attr('font-size', 18).attr('font-weight', 700)
+        .attr('fill', labelFill).attr('font-size', 22).attr('font-weight', 700)
         .text('~333M');
     svg.append('text').attr('text-anchor', 'middle').attr('dy', '0.9em')
-        .attr('fill', 'rgba(255,255,255,0.85)').attr('font-size', 12)
+        .attr('fill', isLight ? '#64748b' : 'rgba(255,255,255,0.85)').attr('font-size', 13)
         .text('Total Subscribers');
 
     // Legend with insights
@@ -148,10 +154,10 @@ async function renderMetrosBar(containerId, data) {
         });
     });
 
-    svg.append('g').attr('transform', `translate(0,${height})`).call(d3.axisBottom(x).ticks(5).tickFormat(d => d + 'M'));
-    svg.append('g').call(d3.axisLeft(y0).tickSize(0));
+    svg.append('g').attr('transform', `translate(0,${height})`).attr('font-size', 13).call(d3.axisBottom(x).ticks(5).tickFormat(d => d + 'M'));
+    svg.append('g').attr('font-size', 13).call(d3.axisLeft(y0).tickSize(0));
 
-    const legend = container.append('div').attr('class', 'chart-legend').style('margin-top', '10px');
+    const legend = container.append('div').attr('class', 'chart-legend').style('margin-top', '12px').style('font-size', '13px');
     keys.forEach(k => {
         legend.append('span').style('margin-right', '16px').style('font-size', '12px')
             .html(`<span style="display:inline-block;width:12px;height:12px;background:${colors[k]};margin-right:4px;border-radius:2px"></span>${labels[k]}`);
@@ -243,14 +249,16 @@ async function renderRevenueBar(containerId, data) {
     bars.transition().duration(500).delay((d, i) => i * 40)
         .attr('width', d => x(d.annual_revenue_b));
 
+    const isLight = document.body.classList.contains('theme-light');
+    const barLabelFill = isLight ? '#1e293b' : '#fff';
     svg.selectAll('.bar-label').data(states).join('text').attr('class', 'bar-label')
         .attr('x', d => x(d.annual_revenue_b) + 6).attr('y', d => y(d.state) + y.bandwidth() / 2)
-        .attr('dy', '0.35em').attr('fill', '#fff').attr('font-size', 11).attr('font-weight', 600)
+        .attr('dy', '0.35em').attr('fill', barLabelFill).attr('font-size', 13).attr('font-weight', 700)
         .text(d => `$${d.annual_revenue_b}B`)
         .style('opacity', 0).transition().delay(550).style('opacity', 1);
 
-    svg.append('g').attr('transform', `translate(0,${height})`).call(d3.axisBottom(x).ticks(5).tickFormat(d => '$' + d + 'B'));
-    svg.append('g').call(d3.axisLeft(y).tickSize(0));
+    svg.append('g').attr('transform', `translate(0,${height})`).attr('font-size', 13).call(d3.axisBottom(x).ticks(5).tickFormat(d => '$' + d + 'B'));
+    svg.append('g').attr('font-size', 13).call(d3.axisLeft(y).tickSize(0));
 }
 
 async function renderTopStatesBar(containerId, data) {
@@ -286,14 +294,16 @@ async function renderTopStatesBar(containerId, data) {
     bars.transition().duration(500).delay((d, i) => i * 40)
         .attr('width', d => x(d.customers_m));
 
+    const isLight = document.body.classList.contains('theme-light');
+    const barLabelFill = isLight ? '#1e293b' : '#fff';
     svg.selectAll('.bar-label').data(states).join('text').attr('class', 'bar-label')
         .attr('x', d => x(d.customers_m) + 6).attr('y', d => y(d.state) + y.bandwidth() / 2)
-        .attr('dy', '0.35em').attr('fill', '#fff').attr('font-size', 11).attr('font-weight', 600)
+        .attr('dy', '0.35em').attr('fill', barLabelFill).attr('font-size', 13).attr('font-weight', 700)
         .text(d => d.customers_m + 'M')
         .style('opacity', 0).transition().delay(550).style('opacity', 1);
 
-    svg.append('g').attr('transform', `translate(0,${height})`).call(d3.axisBottom(x).ticks(5).tickFormat(d => d + 'M'));
-    svg.append('g').call(d3.axisLeft(y).tickSize(0));
+    svg.append('g').attr('transform', `translate(0,${height})`).attr('font-size', 13).call(d3.axisBottom(x).ticks(5).tickFormat(d => d + 'M'));
+    svg.append('g').attr('font-size', 13).call(d3.axisLeft(y).tickSize(0));
 }
 
 // Table input: parse CSV or JSON and render horizontal bar chart

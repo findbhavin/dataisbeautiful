@@ -24,11 +24,8 @@ def load_mobile_subscribers_data() -> Dict[str, Any]:
     # Normalize state identifier to ISO-2 code
     df['state_iso'] = df['State'].apply(normalize_state_identifier)
     
-    # Filter out OTH (aggregate) rows for totals and aggregation
-    df_states = df[df['state_iso'] != 'OTH'].copy()
-    
-    # Calculate total subscribers across all states
-    total_subscribers = int(df_states['Total Mobile (T)'].sum() * 1_000_000)  # Convert millions to actual count
+    # Total = all rows including Others (aggregate of remaining 19 states)
+    total_subscribers = int(df['Total Mobile (T)'].sum() * 1_000_000)
     
     # Prepare state-level data
     by_state = []
@@ -37,7 +34,7 @@ def load_mobile_subscribers_data() -> Dict[str, Any]:
         
         state_data = {
             'state_iso': state_iso,
-            'state_name': get_state_name(state_iso) if state_iso != 'OTH' else 'Other',
+            'state_name': get_state_name(state_iso) or state_iso,
             'latitude': float(row['Latitude']),
             'longitude': float(row['Longitude']),
             'total_subscribers': float(row['Total Mobile (T)']),
