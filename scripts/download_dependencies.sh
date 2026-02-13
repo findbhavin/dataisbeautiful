@@ -4,7 +4,9 @@ set -e  # Exit on error
 
 # Constants for file size validation
 MIN_FILE_SIZE=10000        # Minimum valid file size (10KB)
-FULL_RES_THRESHOLD=50000   # Threshold for full-resolution data (50KB)
+FULL_RES_THRESHOLD=20000   # Simplified placeholder is ~24KB; real states-10m is ~100KB+
+# Canonical US states TopoJSON (object name "states", FIPS ids) - use this instead of us-10m.v1 (counties)
+STATES_TOPO_URL="https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json"
 
 echo "================================================"
 echo "Downloading D3.js and TopoJSON Dependencies"
@@ -50,7 +52,7 @@ if [ -f "$TOPOJSON_DIR/us_states.topo.json" ]; then
         echo "✓ US States topology already exists and looks valid ($FILE_SIZE bytes)"
     else
         echo "⚠ Existing file is simplified topology ($FILE_SIZE bytes) - downloading full-resolution data..."
-        curl -L "https://d3js.org/us-10m.v1.json" -o "$TOPOJSON_DIR/us_states.topo.json" --progress-bar
+        curl -L "$STATES_TOPO_URL" -o "$TOPOJSON_DIR/us_states.topo.json" --progress-bar
         
         # Check if download succeeded
         NEW_SIZE=$(wc -c < "$TOPOJSON_DIR/us_states.topo.json")
@@ -62,8 +64,8 @@ if [ -f "$TOPOJSON_DIR/us_states.topo.json" ]; then
         fi
     fi
 else
-    echo "Downloading from https://d3js.org/us-10m.v1.json..."
-    curl -L "https://d3js.org/us-10m.v1.json" -o "$TOPOJSON_DIR/us_states.topo.json" --progress-bar
+    echo "Downloading from $STATES_TOPO_URL..."
+    curl -L "$STATES_TOPO_URL" -o "$TOPOJSON_DIR/us_states.topo.json" --progress-bar
     
     # Validate download
     FILE_SIZE=$(wc -c < "$TOPOJSON_DIR/us_states.topo.json")
@@ -86,7 +88,7 @@ if [ "$FILE_SIZE" -lt "$MIN_FILE_SIZE" ]; then
 elif [ "$FILE_SIZE" -lt "$FULL_RES_THRESHOLD" ]; then
     echo "⚠ Using simplified topology (${FILE_SIZE} bytes)"
     echo "   For production use with detailed state boundaries, ensure internet access"
-    echo "   and re-run this script to download full-resolution data (~60-70KB)"
+    echo "   and re-run this script to download full-resolution data (states-10m ~100KB+)"
 else
     echo "✓ US topology data ready (${FILE_SIZE} bytes)"
 fi

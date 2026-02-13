@@ -1,5 +1,16 @@
 # Troubleshooting Guide
 
+## Map shows grey background with only a few shapes or scattered labels
+
+### Cause
+The repo ships a **simplified placeholder** TopoJSON (~24KB) where each state is a single small polygon. Real state boundaries require the full **states-10m** topology (~100KB+).
+
+### Fix
+- **Docker / Cloud Run:** Rebuild the image. The Dockerfile now overwrites the placeholder with the topology downloaded at build time (no settings change needed).
+- **Local dev:** Run once: `./scripts/download_dependencies.sh` so `data/topojson/us_states.topo.json` is replaced with full-resolution data. If the script cannot run (e.g. no curl), the map will fall back to CDN (us-atlas states-10m) when the API is unavailable.
+
+---
+
 ## D3.js Visualization Not Loading
 
 ### Symptoms
@@ -76,8 +87,8 @@ curl -L "https://unpkg.com/d3@7/dist/d3.min.js" -o "static/js/d3.min.js"
 # Download TopoJSON
 curl -L "https://unpkg.com/topojson@3/dist/topojson.min.js" -o "static/js/topojson.min.js"
 
-# Download US topology data
-curl -L "https://d3js.org/us-10m.v1.json" -o "data/topojson/us_states.topo.json"
+# Download US states topology (required for map to show state boundaries correctly)
+curl -L "https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json" -o "data/topojson/us_states.topo.json"
 ```
 
 ### Integration with Docker/CI/CD

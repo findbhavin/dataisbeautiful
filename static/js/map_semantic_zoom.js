@@ -176,7 +176,8 @@ class MapVisualizer {
      */
     async loadTopology() {
         const localPath = '/api/geo/topojson/states';
-        const cdnPath = 'https://d3js.org/us-10m.v1.json';
+        // Use states-only TopoJSON (object "states"); d3js.org/us-10m.v1 has "counties" and may not have "states"
+        const cdnPath = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json';
         
         try {
             console.log('Attempting to load topology from local server...');
