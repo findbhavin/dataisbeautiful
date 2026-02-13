@@ -1,0 +1,75 @@
+{
+  "dual": {
+    "label": "Regional & Edge (High Density) - Dual Locations",
+    "pairs": [
+      {"state": "New York", "hub1": "New York City (Manhattan)", "hub2": "Buffalo"},
+      {"state": "Pennsylvania", "hub1": "Philadelphia", "hub2": "Pittsburgh"},
+      {"state": "New Jersey", "hub1": "Secaucus (North NJ)", "hub2": "Piscataway (Central NJ)"},
+      {"state": "Florida", "hub1": "Miami", "hub2": "Jacksonville"},
+      {"state": "Georgia", "hub1": "Atlanta (Downtown)", "hub2": "Lithia Springs / Suwanee"},
+      {"state": "North Carolina", "hub1": "Charlotte", "hub2": "Raleigh (RTP)"},
+      {"state": "Ohio", "hub1": "Columbus", "hub2": "Cleveland"},
+      {"state": "Maryland", "hub1": "Baltimore", "hub2": "Hanover / Linthicum"},
+      {"state": "Kentucky", "hub1": "Louisville", "hub2": "Lexington"},
+      {"state": "California", "hub1": "Los Angeles", "hub2": "San Jose (Silicon Valley)"},
+      {"state": "Washington", "hub1": "Seattle", "hub2": "Quincy"},
+      {"state": "Arizona", "hub1": "Phoenix", "hub2": "Chandler / Mesa"},
+      {"state": "Texas", "hub1": "Dallas", "hub2": "Houston"},
+      {"state": "Tennessee", "hub1": "Nashville", "hub2": "Memphis"},
+      {"state": "Alabama", "hub1": "Birmingham", "hub2": "Huntsville"},
+      {"state": "Illinois", "hub1": "Chicago (Downtown)", "hub2": "Elk Grove Village"},
+      {"state": "Michigan", "hub1": "Detroit (Southfield)", "hub2": "Grand Rapids"},
+      {"state": "Indiana", "hub1": "Indianapolis", "hub2": "South Bend"}
+    ]
+  },
+  "single": {
+    "label": "Single Edge (Standard Density) - Single Locations",
+    "pairs": [
+      {"state": "Alaska", "hub1": "Anchorage", "hub2": ""},
+      {"state": "Arkansas", "hub1": "Little Rock", "hub2": ""},
+      {"state": "Colorado", "hub1": "Denver", "hub2": ""},
+      {"state": "Connecticut", "hub1": "Stamford", "hub2": ""},
+      {"state": "Delaware", "hub1": "Wilmington", "hub2": ""},
+      {"state": "Hawaii", "hub1": "Honolulu", "hub2": ""},
+      {"state": "Idaho", "hub1": "Boise", "hub2": ""},
+      {"state": "Iowa", "hub1": "Des Moines (Council Bluffs)", "hub2": ""},
+      {"state": "Kansas", "hub1": "Overland Park", "hub2": ""},
+      {"state": "Louisiana", "hub1": "New Orleans", "hub2": ""},
+      {"state": "Maine", "hub1": "Portland", "hub2": ""},
+      {"state": "Massachusetts", "hub1": "Boston", "hub2": ""},
+      {"state": "Minnesota", "hub1": "Minneapolis", "hub2": ""},
+      {"state": "Mississippi", "hub1": "Jackson", "hub2": ""},
+      {"state": "Missouri", "hub1": "St. Louis", "hub2": ""},
+      {"state": "Wisconsin", "hub1": "Milwaukee", "hub2": ""},
+      {"state": "Montana", "hub1": "Billings", "hub2": ""},
+      {"state": "Nebraska", "hub1": "Omaha", "hub2": ""},
+      {"state": "Nevada", "hub1": "Las Vegas", "hub2": ""},
+      {"state": "New Hampshire", "hub1": "Nashua / Manchester", "hub2": ""},
+      {"state": "New Mexico", "hub1": "Albuquerque", "hub2": ""},
+      {"state": "North Dakota", "hub1": "Fargo", "hub2": ""},
+      {"state": "Oklahoma", "hub1": "Oklahoma City", "hub2": ""},
+      {"state": "Oregon", "hub1": "Hillsboro (Portland Metro)", "hub2": ""},
+      {"state": "Rhode Island", "hub1": "Providence", "hub2": ""},
+      {"state": "South Carolina", "hub1": "Columbia", "hub2": ""},
+      {"state": "South Dakota", "hub1": "Sioux Falls", "hub2": ""},
+      {"state": "Utah", "hub1": "Salt Lake City", "hub2": ""},
+      {"state": "Vermont", "hub1": "Burlington", "hub2": ""},
+      {"state": "Virginia", "hub1": "Ashburn", "hub2": ""},
+      {"state": "West Virginia", "hub1": "Charleston", "hub2": ""},
+      {"state": "Wyoming", "hub1": "Cheyenne", "hub2": ""}
+    ]
+  },
+  "superCore": {
+    "label": "Super Core (National Hubs)",
+    "pairs": [
+      {"state": "New York", "hub1": "New York / Secaucus", "hub2": ""},
+      {"state": "Georgia", "hub1": "Atlanta", "hub2": ""},
+      {"state": "Texas", "hub1": "Dallas", "hub2": ""},
+      {"state": "California", "hub1": "San Jose", "hub2": "Los Angeles"},
+      {"state": "Illinois", "hub1": "Chicago", "hub2": ""},
+      {"state": "Washington", "hub1": "Seattle", "hub2": ""},
+      {"state": "Florida", "hub1": "Miami", "hub2": ""},
+      {"state": "Colorado", "hub1": "Denver", "hub2": ""}
+    ]
+  }
+}

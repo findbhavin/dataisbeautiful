@@ -92,6 +92,14 @@
                     <label><input type="checkbox" id="tier3-toggle" checked> Tier 3 (Edge)</label>
                 </div>
             </div>
+            <div class="control-group" id="hub-pairs-control-group" style="display:none">
+                <label class="control-label">Show Types</label>
+                <div class="tier-toggles">
+                    <label><input type="checkbox" id="hub-dual-toggle" checked> Dual (Regional &amp; Edge)</label>
+                    <label><input type="checkbox" id="hub-single-toggle" checked> Single Edge</label>
+                    <label><input type="checkbox" id="hub-super-toggle" checked> Super Core</label>
+                </div>
+            </div>
             <div class="control-group" id="metric-control-group">
                 <label class="control-label" for="metric-select">Select Metric</label>
                 <select id="metric-select" title="Others = Cable/Dish etc. (6.9M total: 5.6 Pre + 1.3 Post)">
@@ -195,7 +203,7 @@
         <div class="chart-panel tab-content" id="tab-hub-pairs">
             <div class="glass-container fade-in">
                 <h3>Hub Pairs Map</h3>
-                <p class="help-text">Paste table with State, Primary Location (Hub 1), Secondary Location (Hub 2). Each state&#39;s pair will show as two dots with the same color. Go to <strong>Map</strong> page and select &quot;Hub Pairs&quot; from the dropdown.</p>
+                <p class="help-text">Select <strong>Hub Pairs</strong> on the Map page to view default data (Dual, Single Edge, Super Core). Or paste your own table below. Dual/Super Core: two dots connected by a line. Single Edge: one dot. Different colors per type.</p>
                 <textarea id="hub-pairs-input" placeholder="State,Primary Location (Hub 1),Secondary Location (Hub 2)&#10;New York,New York City (Manhattan),Buffalo&#10;Pennsylvania,Philadelphia,Pittsburgh&#10;..." rows="10"></textarea>
                 <button id="hub-pairs-apply">Apply &amp; View Map</button>
                 <div id="hub-pairs-output"></div>
