@@ -1,0 +1,316 @@
+/**
+ * Mobile-responsive styles for MapVisual
+ * Breakpoints: 768px (tablet), 480px (phone)
+ * Desktop layout unchanged - only applies below 768px
+ */
+
+/* Tablet and below (768px) */
+@media (max-width: 768px) {
+    .header {
+        padding: 24px 16px 16px;
+    }
+
+    .header h1 {
+        font-size: 1.75rem;
+    }
+
+    .header p {
+        font-size: 0.95rem;
+    }
+
+    .page-nav {
+        padding: 10px 12px;
+        margin: 16px auto 12px;
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .page-btn {
+        padding: 12px 18px;
+        font-size: 0.9rem;
+        min-height: 44px; /* Touch target */
+    }
+
+    .glass-container {
+        padding: 20px 16px;
+        border-radius: 16px;
+    }
+
+    .controls-section,
+    .stats-panel,
+    .map-container,
+    .legend,
+    .tab-content,
+    .analytics-page .chart-panel,
+    .page-section[data-page="data"],
+    .others-data-card {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .controls-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+    }
+
+    .stat-label,
+    .stat-subtitle {
+        font-size: 0.85rem;
+    }
+
+    #map-svg-container {
+        min-height: 360px;
+        touch-action: pan-x pan-y pinch-zoom;
+    }
+
+    .map-container .glass-container {
+        min-height: 420px;
+    }
+
+    .legend-scale {
+        height: 24px;
+    }
+
+    .legend-labels {
+        font-size: 0.8rem;
+    }
+
+    .dashboard-tabs {
+        padding: 10px 12px;
+        gap: 6px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+    }
+
+    .tab-btn {
+        padding: 10px 14px;
+        font-size: 0.85rem;
+        white-space: nowrap;
+        flex-shrink: 0;
+        min-height: 44px;
+    }
+
+    .chart-panel h3 {
+        font-size: 1.1rem;
+    }
+
+    .chart-panel .glass-container {
+        min-height: 280px;
+        padding: 16px;
+    }
+
+    #chart-market-share,
+    #chart-metros,
+    #chart-spectrum,
+    #chart-revenue,
+    #chart-top-states {
+        min-height: 240px;
+    }
+
+    .data-values-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .data-value {
+        font-size: 1.25rem;
+    }
+
+    .tier-toggles {
+        gap: 10px 16px;
+    }
+
+    .tier-toggles label {
+        font-size: 0.85rem;
+    }
+
+    select,
+    button {
+        padding: 14px 16px;
+        min-height: 44px;
+        font-size: 1rem;
+        touch-action: manipulation; /* Remove 300ms tap delay */
+    }
+
+    .tab-btn,
+    .page-btn {
+        touch-action: manipulation;
+    }
+
+    .tooltip {
+        max-width: 260px;
+        font-size: 0.85rem;
+        padding: 12px;
+    }
+
+    .map-total-note {
+        padding: 12px 14px;
+        font-size: 0.85rem;
+    }
+
+    .info-banner {
+        padding: 12px 16px;
+        font-size: 0.85rem;
+    }
+
+    /* Table input / paste area - full width on mobile */
+    .table-input-area,
+    #table-input-area,
+    #data-centers-input,
+    #hub-pairs-input {
+        min-height: 120px;
+        font-size: 0.9rem;
+    }
+
+    /* Chart containers - allow overflow for D3 */
+    .chart-panel .glass-container > div {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* Phone (480px and below) */
+@media (max-width: 480px) {
+    .header {
+        padding: 20px 12px 12px;
+    }
+
+    .header h1 {
+        font-size: 1.5rem;
+    }
+
+    .header p {
+        font-size: 0.9rem;
+    }
+
+    .page-nav {
+        padding: 8px 10px;
+    }
+
+    .page-btn {
+        padding: 10px 14px;
+        font-size: 0.85rem;
+    }
+
+    .glass-container {
+        padding: 16px 12px;
+        border-radius: 12px;
+    }
+
+    .controls-section,
+    .stats-panel,
+    .map-container,
+    .legend,
+    .tab-content {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .stat-value {
+        font-size: 1.75rem;
+    }
+
+    #map-svg-container {
+        min-height: 300px;
+    }
+
+    .map-container .glass-container {
+        min-height: 360px;
+    }
+
+    .data-values-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .data-value-item {
+        padding: 10px 12px;
+    }
+
+    .data-value {
+        font-size: 1.2rem;
+    }
+
+    .chart-panel .glass-container {
+        min-height: 260px;
+    }
+
+    #chart-market-share,
+    #chart-metros,
+    #chart-spectrum,
+    #chart-revenue,
+    #chart-top-states {
+        min-height: 220px;
+    }
+
+    .tier-toggles label {
+        font-size: 0.8rem;
+    }
+
+    .tooltip {
+        max-width: 220px;
+        font-size: 0.8rem;
+    }
+}
+
+/* Data table horizontal scroll on mobile */
+@media (max-width: 768px) {
+    .data-table-section,
+    #data-table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .data-table-section table,
+    .data-table-section .data-table {
+        min-width: 600px;
+    }
+
+    .data-table-section th,
+    .data-table-section td {
+        padding: 8px 10px;
+        font-size: 0.85rem;
+    }
+}
+
+/* Prevent layout shift from scrollbar */
+@media (max-width: 768px) {
+    html {
+        overflow-x: hidden;
+    }
+
+    body {
+        overflow-x: hidden;
+    }
+}
+
+/* Safe area for notched phones (iPhone X+, etc.) */
+@supports (padding: max(0px)) {
+    .header {
+        padding-top: max(24px, env(safe-area-inset-top));
+    }
+
+    .page-nav {
+        padding-left: max(12px, env(safe-area-inset-left));
+        padding-right: max(12px, env(safe-area-inset-right));
+    }
+
+    .controls-section,
+    .stats-panel,
+    .map-container,
+    .legend {
+        padding-left: max(12px, env(safe-area-inset-left));
+        padding-right: max(12px, env(safe-area-inset-right));
+    }
+}
