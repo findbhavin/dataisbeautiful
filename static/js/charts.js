@@ -115,7 +115,7 @@ async function renderMetrosBar(containerId, data) {
     container.selectAll('*').remove();
     if (!data || !data.top10_metros) return;
 
-    // Horizontal grouped bar: metro names on left (no rotation)
+    // Single stacked bar per metro: multicolor segments for each carrier
     const margin = { top: 20, right: 80, bottom: 40, left: 120 };
     const width = 800 - margin.left - margin.right;
     const height = 420 - margin.top - margin.bottom;
@@ -126,36 +126,39 @@ async function renderMetrosBar(containerId, data) {
     const metros = data.top10_metros;
     const keys = ['verizon', 'tmobile', 'att', 'others'];
     const colors = { verizon: ChartColors.verizon, tmobile: ChartColors.tmobile, att: ChartColors.att, others: ChartColors.others };
-    const labels = { verizon: 'Verizon', tmobile: 'T-Mobile', att: 'AT&T', others: 'Others' };
+    const labels = { verizon: 'Verizon', tmobile: 'T-Mobile', att: 'AT&T', others: 'Others (carriers)' };
 
-    const y0 = d3.scaleBand().domain(metros.map(d => d.metro)).range([0, height]).padding(0.25);
-    const x1 = d3.scaleBand().domain(keys).range([0, y0.bandwidth()]).padding(0.08);
-    const x = d3.scaleLinear().domain([0, d3.max(metros, d => d3.max(keys, k => d[k])) * 1.05]).range([0, width]);
+    const maxTotal = d3.max(metros, d => d.total) * 1.05;
+    const x = d3.scaleLinear().domain([0, maxTotal]).range([0, width]);
+    const y = d3.scaleBand().domain(metros.map(d => d.metro)).range([0, height]).padding(0.25);
 
-    const g = svg.append('g');
-    metros.forEach(metro => {
-        const row = g.append('g').attr('transform', `translate(0,${y0(metro.metro)})`);
-        keys.forEach(key => {
-            const bar = row.append('rect')
-                .attr('x', 0).attr('y', x1(key))
-                .attr('width', 0).attr('height', x1.bandwidth())
-                .attr('fill', colors[key]).attr('rx', 3)
-                .style('cursor', 'pointer')
-                .on('mouseover', function(event) {
-                    d3.select(this).attr('opacity', 0.9);
-                    showTooltip(event, `<strong>${metro.metro}</strong> – ${labels[key]}<br>${metro[key].toFixed(1)}M subscribers`);
-                })
-                .on('mouseout', function() {
-                    d3.select(this).attr('opacity', 1);
-                    hideTooltip();
-                });
-            bar.transition().duration(500).delay(y0(metro.metro) / height * 200)
-                .attr('width', x(metro[key]));
-        });
+    const stack = d3.stack().keys(keys).order(d3.stackOrderNone);
+    const stacked = stack(metros);
+
+    stacked.forEach((layer, i) => {
+        const key = keys[i];
+        svg.selectAll(`rect.${key}`).data(layer).join('rect')
+            .attr('class', key)
+            .attr('y', d => y(d.data.metro))
+            .attr('height', y.bandwidth())
+            .attr('x', d => x(d[0]))
+            .attr('width', 0)
+            .attr('fill', colors[key]).attr('rx', 2)
+            .style('cursor', 'pointer')
+            .on('mouseover', function(event, d) {
+                d3.select(this).attr('opacity', 0.9);
+                showTooltip(event, `<strong>${d.data.metro}</strong> – ${labels[key]}<br>${d.data[key].toFixed(1)}M subscribers`);
+            })
+            .on('mouseout', function() {
+                d3.select(this).attr('opacity', 1);
+                hideTooltip();
+            })
+            .transition().duration(400).delay((d, j) => j * 30)
+            .attr('width', d => x(d[1]) - x(d[0]));
     });
 
     svg.append('g').attr('transform', `translate(0,${height})`).attr('font-size', 13).call(d3.axisBottom(x).ticks(5).tickFormat(d => d + 'M'));
-    svg.append('g').attr('font-size', 13).call(d3.axisLeft(y0).tickSize(0));
+    svg.append('g').attr('font-size', 13).call(d3.axisLeft(y).tickSize(0));
 
     const legend = container.append('div').attr('class', 'chart-legend').style('margin-top', '12px').style('font-size', '13px');
     keys.forEach(k => {
@@ -220,6 +223,11 @@ async function renderRevenueBar(containerId, data) {
     container.selectAll('*').remove();
     if (!data || !data.revenue_top10) return;
 
+    const states = data.revenue_top10;
+    const count = states.length;
+    const subtitleEl = document.getElementById('revenue-subtitle');
+    if (subtitleEl) subtitleEl.textContent = count < 51 ? `(Top ${count} States)` : '(All States)';
+
     // Horizontal bar: state names on left, values on right
     const margin = { top: 20, right: 70, bottom: 30, left: 100 };
     const width = 700 - margin.left - margin.right;
@@ -261,7 +269,7 @@ async function renderRevenueBar(containerId, data) {
     svg.append('g').attr('font-size', 13).call(d3.axisLeft(y).tickSize(0));
 }
 
-async function renderTopStatesBar(containerId, data) {
+async function renderTopStatesBar(containerId, data, operatorKey) {
     const container = d3.select(`#${containerId}`);
     container.selectAll('*').remove();
     if (!data || !data.top10_states) return;
@@ -273,21 +281,42 @@ async function renderTopStatesBar(containerId, data) {
     const svg = container.append('svg').attr('width', width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom)
         .append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
-    const states = data.top10_states;
+    let states;
+    const valueKey = operatorKey === 'total' ? 'customers_m' : (operatorKey + '_total');
+    const valueLabel = operatorKey === 'total' ? 'customers' : operatorKey;
+
+    if (operatorKey === 'total') {
+        states = data.top10_states;
+    } else {
+        const mobileRes = await fetch('/api/mobile/data').then(r => r.json());
+        const mobileData = mobileRes.by_state;
+        if (!mobileData) return;
+        const sorted = mobileData
+            .filter(d => d.state_iso !== 'OTH')
+            .map(d => ({ state: d.state_name, customers_m: d[valueKey], primary_operator: d.state_name }))
+            .sort((a, b) => b.customers_m - a.customers_m)
+            .slice(0, 10);
+        states = sorted;
+    }
+
+    const maxVal = d3.max(states, d => d.customers_m) * 1.05;
     const y = d3.scaleBand().domain(states.map(d => d.state)).range([0, height]).padding(0.2);
-    const x = d3.scaleLinear().domain([0, 45]).range([0, width]);
+    const x = d3.scaleLinear().domain([0, maxVal]).range([0, width]);
+
+    const opColors = { verizon: ChartColors.verizon, tmobile: ChartColors.tmobile, att: ChartColors.att, others: ChartColors.others };
+    const barColor = operatorKey === 'total' ? ChartColors.neutral[3] : (opColors[operatorKey] || ChartColors.neutral[3]);
 
     const bars = svg.selectAll('rect').data(states).join('rect')
         .attr('y', d => y(d.state)).attr('height', y.bandwidth())
         .attr('x', 0).attr('width', 0)
-        .attr('fill', ChartColors.neutral[3]).attr('rx', 4)
+        .attr('fill', barColor).attr('rx', 4)
         .style('cursor', 'pointer')
         .on('mouseover', function(event, d) {
-            d3.select(this).attr('fill', ChartColors.neutral[2]);
-            showTooltip(event, `<strong>${d.state}</strong><br>${d.customers_m}M customers<br>Primary: ${d.primary_operator}`);
+            d3.select(this).attr('opacity', 0.85);
+            showTooltip(event, `<strong>${d.state}</strong><br>${d.customers_m}M ${valueLabel} (${operatorKey === 'total' ? 'total' : operatorKey})`);
         })
         .on('mouseout', function() {
-            d3.select(this).attr('fill', ChartColors.neutral[3]);
+            d3.select(this).attr('opacity', 1);
             hideTooltip();
         });
 
@@ -376,5 +405,6 @@ async function loadRevenue() {
 }
 async function loadTopStates() {
     const data = await fetch('/api/analytics/market-wide').then(r => r.json());
-    await renderTopStatesBar('chart-top-states', data);
+    const operatorKey = (document.getElementById('top-states-operator')?.value || 'total');
+    await renderTopStatesBar('chart-top-states', data, operatorKey);
 }
