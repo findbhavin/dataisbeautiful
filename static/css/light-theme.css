@@ -187,12 +187,10 @@ body.theme-light .tooltip {
     display: block;
 }
 
-/* Chart panels: only show when BOTH on Analytics page AND active tab */
-.chart-panel.page-section.tab-content {
-    display: none;
-}
-.chart-panel.page-section.tab-content.active {
-    display: block;
+.analytics-page .chart-panel {
+    margin: 20px auto;
+    max-width: 1400px;
+    padding: 0 20px;
 }
 
 .page-section[data-page="data"] {
@@ -277,4 +275,10 @@ body.theme-light .tooltip {
     font-weight: 400;
     color: #64748b;
     font-size: 0.9em;
+}
+
+.chart-error {
+    color: #dc2626;
+    padding: 20px;
+    font-size: 0.95rem;
 }
