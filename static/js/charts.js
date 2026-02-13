@@ -37,6 +37,19 @@ function getOperatorColor(operatorName) {
     return ChartColors.others;
 }
 
+// Helper function to build market share tooltip
+function buildMarketShareTooltip(data) {
+    const operatorName = data.carrier || data.operator;
+    const sharePct = data.subscriber_share_pct || data.share_pct;
+    const revenuePct = data.revenue_share_pct || 0;
+    const insight = data.insight || '';
+    
+    let html = `<strong>${operatorName}</strong><br>Subscriber share: ${sharePct}%`;
+    if (revenuePct) html += `<br>Revenue share: ${revenuePct}%`;
+    if (insight) html += `<br><em>${insight}</em>`;
+    return html;
+}
+
 // Shared chart tooltip
 function chartTooltip() {
     let tip = d3.select('body').select('.chart-tooltip');
@@ -106,12 +119,7 @@ async function renderMarketSharePie(containerId, data) {
         .style('cursor', 'pointer')
         .on('mouseover', function(event, d) {
             d3.select(this).attr('opacity', 0.9).attr('stroke-width', 2);
-            const operatorName = d.data.carrier || d.data.operator;
-            const sharePct = d.data.subscriber_share_pct || d.data.share_pct;
-            const revenuePct = d.data.revenue_share_pct || 0;
-            const insight = d.data.insight || '';
-            const tooltipHtml = `<strong>${operatorName}</strong><br>Subscriber share: ${sharePct}%${revenuePct ? `<br>Revenue share: ${revenuePct}%` : ''}${insight ? `<br><em>${insight}</em>` : ''}`;
-            showTooltip(event, tooltipHtml);
+            showTooltip(event, buildMarketShareTooltip(d.data));
         })
         .on('mouseout', function() {
             d3.select(this).attr('opacity', 1).attr('stroke-width', 1.5);

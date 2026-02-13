@@ -1,7 +1,8 @@
 {
   "country": "India",
   "currency": "INR",
-  "source": "TRAI / Industry Reports (Sep 2025)",
+  "unit": "Crores",
+  "source": "TRAI / Industry Reports (Q2 2024)",
   "top10_metros": [
     {"metro": "Mumbai", "subscribers_cr": 28.55, "revenue_inr_cr": 125000, "avg_arpu": 438},
     {"metro": "Delhi NCR", "subscribers_cr": 27.28, "revenue_inr_cr": 118500, "avg_arpu": 434},
