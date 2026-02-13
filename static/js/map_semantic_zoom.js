@@ -538,7 +538,7 @@ class MapVisualizer {
         const value = stateData[this.currentMetric];
         const metricLabel = this.getMetricLabel(this.currentMetric);
         const isOthersMetric = this.currentMetric.startsWith('others_');
-        const othersNote = isOthersMetric ? '<div class="tooltip-note">Others = aggregate of 19 remaining states (not shown individually)</div>' : '';
+        const othersNote = isOthersMetric ? '<div class="tooltip-note">Others (carriers) = Cable/Dish, etc. (6.9M total: 5.6 Pre + 1.3 Post)</div>' : '';
         
         return `
             <div class="tooltip-title">${stateData.state_name}</div>
@@ -564,9 +564,9 @@ class MapVisualizer {
             'att_total': 'AT&T (T)',
             'att_prepaid': 'AT&T (Pre)',
             'att_postpaid': 'AT&T (Post)',
-            'others_total': 'Others (T)',
-            'others_prepaid': 'Others (Pre)',
-            'others_postpaid': 'Others (Post)'
+            'others_total': 'Others (carriers) (T)',
+            'others_prepaid': 'Others (carriers) (Pre)',
+            'others_postpaid': 'Others (carriers) (Post)'
         };
         return labels[metric] || metric;
     }
@@ -587,13 +587,23 @@ class MapVisualizer {
     }
     
     updateStats() {
-        // Total subscribers (all states including Others aggregate)
+        // Total subscribers (all 33 rows: 32 states + Others aggregate)
         const totalElement = d3.select('#stat-total');
+        const totalMillions = this.data.by_state.reduce((sum, d) => sum + d.total_subscribers, 0);
+        const displayTotal = Math.round(totalMillions * 10) / 10; // Avoid float drift, match 333.0
         if (!totalElement.empty()) {
-            const totalMillions = this.data.by_state.reduce((sum, d) => sum + d.total_subscribers, 0);
-            totalElement.text(`${totalMillions.toFixed(1)}M`);
+            totalElement.text(`${displayTotal}M`);
         }
-        
+        // Others (carriers) = 6.9M (5.6 Pre + 1.3 Post) - non-Big3 carriers
+        const othersCarriers = this.data.by_state.reduce((s, d) => s + d.others_total, 0);
+        const othersCarriersPost = this.data.by_state.reduce((s, d) => s + d.others_postpaid, 0);
+        const othersCarriersPre = this.data.by_state.reduce((s, d) => s + d.others_prepaid, 0);
+        const diffNote = document.getElementById('map-total-note');
+        if (diffNote) {
+            const diff = Math.abs(displayTotal - 333);
+            const diffText = diff >= 0.01 ? ` <span class="total-diff">(Δ ${(displayTotal - 333).toFixed(2)}M vs 333.0)</span>` : '';
+            diffNote.innerHTML = `Total: <strong>${displayTotal}M</strong>${diffText}. <em>Others (carriers)</em>: ${othersCarriers.toFixed(1)}M (${othersCarriersPre.toFixed(1)} Pre + ${othersCarriersPost.toFixed(1)} Post) — Cable/Dish, etc.`;
+        }
         // States shown on map (32 individual, excluding Others aggregate)
         const statesElement = d3.select('#stat-states');
         if (!statesElement.empty()) {

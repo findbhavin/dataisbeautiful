@@ -229,3 +229,38 @@ body.theme-light .tooltip {
     border-collapse: collapse;
     font-size: 0.9rem;
 }
+
+/* Operator-colored columns for readability */
+.data-table-operators th.col-verizon,
+.data-table-operators td.col-verizon { background: rgba(220, 38, 38, 0.12); }
+.data-table-operators th.col-tmobile,
+.data-table-operators td.col-tmobile { background: rgba(219, 39, 119, 0.12); }
+.data-table-operators th.col-att,
+.data-table-operators td.col-att { background: rgba(2, 132, 199, 0.12); }
+.data-table-operators th.col-others,
+.data-table-operators td.col-others { background: rgba(100, 116, 139, 0.12); }
+
+.map-total-note {
+    margin-top: 12px;
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    max-width: 1400px;
+}
+
+.chart-controls-inline {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chart-controls-inline label {
+    font-weight: 500;
+    color: #475569;
+}
+
+.chart-subtitle {
+    font-weight: 400;
+    color: #64748b;
+    font-size: 0.9em;
+}
