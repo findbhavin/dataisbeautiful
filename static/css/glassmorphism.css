@@ -356,33 +356,7 @@ button:active {
     100% { transform: rotate(360deg); }
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-    .header h1 {
-        font-size: 2rem;
-    }
-    
-    .header p {
-        font-size: 1rem;
-    }
-    
-    .controls-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .stat-value {
-        font-size: 2rem;
-    }
-    
-    /* Maintain map visibility on mobile */
-    #map-svg-container {
-        min-height: 400px; /* Smaller but still visible on mobile */
-    }
-    
-    .map-container .glass-container {
-        min-height: 460px; /* 400px + 60px padding */
-    }
-}
+/* Responsive design moved to responsive.css - desktop layout unchanged */
 
 /* Animations */
 @keyframes fadeIn {
