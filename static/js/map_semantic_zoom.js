@@ -44,8 +44,9 @@ class MapVisualizer {
         this.STATE_STROKE_WIDTH = 1;  // Balanced stroke width (CSS fallback is 0.5px)
         this.STATE_FILL_OPACITY = 0.9;  // Slightly higher opacity for better color saturation
         
-        // ColorBrewer YlGnBu sequential (colorblind-friendly); skip lightest for glass contrast
-        this.colorScheme = ['#c7e9b4', '#7fcdbb', '#41b6c4', '#2c7fb8', '#253494', '#081d58'];
+        // ColorBrewer YlGnBu sequential (colorblind-friendly); lighter palette for light theme
+        // Lighter = less dense, darker = more dense
+        this.colorScheme = ['#f7fcf0', '#ccebc5', '#7bccc4', '#43a2ca', '#0868ac', '#084081'];
         this.debugLog('[MapVisualizer] Color scheme initialized with', this.colorScheme.length, 'colors:', this.colorScheme);
         
         // FIPS to ISO-2 state code mapping
@@ -244,8 +245,8 @@ class MapVisualizer {
                     const stateData = this.getStateDataForFeature(d);
                     if (!stateData) {
                         // Use neutral fill for states without data
-                        this.debugLog('[MapVisualizer] State without data, using neutral color #cccccc:', d);
-                        return '#cccccc';
+                        this.debugLog('[MapVisualizer] State without data, using neutral color:', d);
+                        return '#e2e8f0';
                     }
                     const color = this.colorScale(stateData[this.currentMetric]);
                     this.debugLog(`[MapVisualizer] State ${stateData.state_iso} (${stateData.state_name}): value=${stateData[this.currentMetric]}, color=${color}`);
@@ -537,7 +538,7 @@ class MapVisualizer {
         const value = stateData[this.currentMetric];
         const metricLabel = this.getMetricLabel(this.currentMetric);
         const isOthersMetric = this.currentMetric.startsWith('others_');
-        const othersNote = isOthersMetric ? '<div class="tooltip-note">Others = Cable/MVNOs, not comparable to VZ/TMO/ATT</div>' : '';
+        const othersNote = isOthersMetric ? '<div class="tooltip-note">Others = aggregate of 19 remaining states (not shown individually)</div>' : '';
         
         return `
             <div class="tooltip-title">${stateData.state_name}</div>
@@ -586,16 +587,14 @@ class MapVisualizer {
     }
     
     updateStats() {
-        // Update total subscribers
+        // Total subscribers (all states including Others aggregate)
         const totalElement = d3.select('#stat-total');
         if (!totalElement.empty()) {
-            const totalMillions = this.data.by_state
-                .filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO)
-                .reduce((sum, d) => sum + d.total_subscribers, 0);
+            const totalMillions = this.data.by_state.reduce((sum, d) => sum + d.total_subscribers, 0);
             totalElement.text(`${totalMillions.toFixed(1)}M`);
         }
         
-        // Update number of states
+        // States shown on map (32 individual, excluding Others aggregate)
         const statesElement = d3.select('#stat-states');
         if (!statesElement.empty()) {
             const stateCount = this.data.by_state.filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO).length;

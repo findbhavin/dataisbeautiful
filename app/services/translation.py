@@ -103,7 +103,7 @@ def get_state_name(iso2_code: str) -> Optional[str]:
         Full state name or None if not found
     """
     if iso2_code == 'OTH':
-        return 'Other'
+        return 'Others (19 states)'
     
     mapping = _load_state_mapping()
     match = mapping[mapping['iso2'] == iso2_code.upper()]
