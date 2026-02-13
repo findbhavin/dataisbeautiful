@@ -32,19 +32,21 @@ WORKDIR /app
 # Copy Python dependencies from builder
 COPY --from=builder /root/.local /root/.local
 
-# Copy downloaded JS libraries and topology data from builder
+# Copy downloaded JS libraries from builder
 COPY --from=builder /build/static/js/d3.min.js ./static/js/
 COPY --from=builder /build/static/js/topojson.min.js ./static/js/
-COPY --from=builder /build/data/topojson/ ./data/topojson/
 
 # Update PATH to include local Python packages
 ENV PATH=/root/.local/bin:$PATH
 
-# Copy application code
+# Copy application code and data (repo data first)
 COPY app/ ./app/
 COPY templates/ ./templates/
 COPY static/ ./static/
 COPY data/ ./data/
+
+# Overwrite only states TopoJSON from builder (full state boundaries); keep repo's counties file
+COPY --from=builder /build/data/topojson/us_states.topo.json ./data/topojson/us_states.topo.json
 
 # Expose port 8080 for Google Cloud Run compatibility
 EXPOSE 8080
