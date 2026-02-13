@@ -76,6 +76,14 @@
     <div class="controls-section page-section active" data-page="map">
         <div class="glass-container controls-grid fade-in">
             <div class="control-group">
+                <label class="control-label" for="map-mode-select">Map Mode</label>
+                <select id="map-mode-select">
+                    <option value="subscribers">Subscribers</option>
+                    <option value="data-centers">Data Centers</option>
+                    <option value="hub-pairs">Hub Pairs</option>
+                </select>
+            </div>
+            <div class="control-group" id="metric-control-group">
                 <label class="control-label" for="metric-select">Select Metric</label>
                 <select id="metric-select" title="Others = Cable/Dish etc. (6.9M total: 5.6 Pre + 1.3 Post)">
                     <option value="total_subscribers">Total Mobile (T)</option>
@@ -112,6 +120,8 @@
             <button class="tab-btn" data-tab="revenue">Revenue by State</button>
             <button class="tab-btn" data-tab="top-states">Top 10 States</button>
             <button class="tab-btn" data-tab="table-input">Table Input</button>
+            <button class="tab-btn" data-tab="data-centers">Data Centers Map</button>
+            <button class="tab-btn" data-tab="hub-pairs">Hub Pairs Map</button>
         </div>
         
         <!-- Chart Panels (tab-content only, no page-section) -->
@@ -158,10 +168,28 @@
         <div class="chart-panel tab-content" id="tab-table-input">
             <div class="glass-container fade-in">
                 <h3>Paste Table Data (CSV or JSON)</h3>
-                <p class="help-text">Paste tabular data below. Supports CSV (comma-separated) or JSON array of objects. The app will infer columns and suggest visualizations.</p>
+                <p class="help-text">Paste tabular data below. Supports CSV (comma-separated) or JSON array of objects. All columns are displayed. Select label/value for chart.</p>
                 <textarea id="table-input-area" placeholder="Paste CSV or JSON here...&#10;Example CSV:&#10;Name,Value,Category&#10;A,10,X&#10;B,20,Y" rows="8"></textarea>
                 <button id="table-parse-btn">Parse &amp; Visualize</button>
                 <div id="table-output-viz"></div>
+            </div>
+        </div>
+        <div class="chart-panel tab-content" id="tab-data-centers">
+            <div class="glass-container fade-in">
+                <h3>Data Centers Map</h3>
+                <p class="help-text">Paste table with State/District and Type of DC (e.g. Super Core). States with values will be highlighted on the map. Go to <strong>Map</strong> page and select &quot;Data Centers&quot; from the dropdown.</p>
+                <textarea id="data-centers-input" placeholder="State/District,Type of DC - Primary,Paired State/ District&#10;California,Super Core,Florida&#10;Texas,,&#10;Florida,Super Core,California&#10;..." rows="10"></textarea>
+                <button id="data-centers-apply">Apply &amp; View Map</button>
+                <div id="data-centers-output"></div>
+            </div>
+        </div>
+        <div class="chart-panel tab-content" id="tab-hub-pairs">
+            <div class="glass-container fade-in">
+                <h3>Hub Pairs Map</h3>
+                <p class="help-text">Paste table with State, Primary Location (Hub 1), Secondary Location (Hub 2). Each state&#39;s pair will show as two dots with the same color. Go to <strong>Map</strong> page and select &quot;Hub Pairs&quot; from the dropdown.</p>
+                <textarea id="hub-pairs-input" placeholder="State,Primary Location (Hub 1),Secondary Location (Hub 2)&#10;New York,New York City (Manhattan),Buffalo&#10;Pennsylvania,Philadelphia,Pittsburgh&#10;..." rows="10"></textarea>
+                <button id="hub-pairs-apply">Apply &amp; View Map</button>
+                <div id="hub-pairs-output"></div>
             </div>
         </div>
     </div>
@@ -260,6 +288,7 @@
     <!-- Map Visualization Script -->
     <script src="/static/js/map_semantic_zoom.js"></script>
     <script src="/static/js/charts.js"></script>
+    <script src="/static/js/custom_maps.js"></script>
 
     <!-- Initialize visualization after libraries load -->
     <script>
@@ -317,6 +346,16 @@
                 
                 // Table input handler
                 document.getElementById('table-parse-btn')?.addEventListener('click', parseTableInput);
+                
+                // Data Centers and Hub Pairs apply buttons
+                document.getElementById('data-centers-apply')?.addEventListener('click', async () => {
+                    const raw = document.getElementById('data-centers-input')?.value || '';
+                    await renderDataCentersMap('data-centers-output', raw);
+                });
+                document.getElementById('hub-pairs-apply')?.addEventListener('click', async () => {
+                    const raw = document.getElementById('hub-pairs-input')?.value || '';
+                    await renderHubPairMap('hub-pairs-output', raw);
+                });
                 
                 // Load data table when Data page is first shown
                 function loadDataTable() {
