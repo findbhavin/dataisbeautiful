@@ -187,6 +187,14 @@ body.theme-light .tooltip {
     display: block;
 }
 
+/* Chart panels: only show when BOTH on Analytics page AND active tab */
+.chart-panel.page-section.tab-content {
+    display: none;
+}
+.chart-panel.page-section.tab-content.active {
+    display: block;
+}
+
 .page-section[data-page="data"] {
     margin: 0 auto;
     max-width: 1400px;
@@ -239,6 +247,12 @@ body.theme-light .tooltip {
 .data-table-operators td.col-att { background: rgba(2, 132, 199, 0.12); }
 .data-table-operators th.col-others,
 .data-table-operators td.col-others { background: rgba(100, 116, 139, 0.12); }
+
+.data-table-operators tr.total-row td {
+    font-weight: 600;
+    border-top: 2px solid #94a3b8;
+    background: rgba(248, 250, 252, 0.95);
+}
 
 .map-total-note {
     margin-top: 12px;
