@@ -80,8 +80,17 @@
                 <select id="map-mode-select">
                     <option value="subscribers">Subscribers</option>
                     <option value="data-centers">Data Centers</option>
+                    <option value="dc-tiers">Data Center Tiers</option>
                     <option value="hub-pairs">Hub Pairs</option>
                 </select>
+            </div>
+            <div class="control-group" id="dc-tiers-control-group" style="display:none">
+                <label class="control-label">Show Tiers</label>
+                <div class="tier-toggles">
+                    <label><input type="checkbox" id="tier1-toggle" checked> Tier 1 (Super Core)</label>
+                    <label><input type="checkbox" id="tier2-toggle" checked> Tier 2 (Regional)</label>
+                    <label><input type="checkbox" id="tier3-toggle" checked> Tier 3 (Edge)</label>
+                </div>
             </div>
             <div class="control-group" id="metric-control-group">
                 <label class="control-label" for="metric-select">Select Metric</label>

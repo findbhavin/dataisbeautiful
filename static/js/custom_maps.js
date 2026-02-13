@@ -17,6 +17,24 @@ const STATE_NAME_TO_ISO = {
 };
 
 let cityCoords = null;
+let dataCenterTiersCache = null;
+
+async function loadDataCenterTiers() {
+    if (dataCenterTiersCache) return dataCenterTiersCache;
+    try {
+        const r = await fetch('/api/analytics/data-center-tiers');
+        const data = await r.json();
+        const tier1 = new Set((data.tier1?.states || []).map(s => stateNameToIso(s.state)).filter(Boolean));
+        const tier2 = new Set((data.tier2?.states || []).map(s => stateNameToIso(s.state)).filter(Boolean));
+        const tier3 = new Set((data.tier3?.states || []).map(s => stateNameToIso(s.state)).filter(Boolean));
+        dataCenterTiersCache = { tier1, tier2, tier3 };
+        window.__dataCenterTiers = dataCenterTiersCache;
+    } catch (e) {
+        dataCenterTiersCache = { tier1: new Set(), tier2: new Set(), tier3: new Set() };
+        window.__dataCenterTiers = dataCenterTiersCache;
+    }
+    return dataCenterTiersCache;
+}
 
 async function loadCityCoords() {
     if (cityCoords) return cityCoords;

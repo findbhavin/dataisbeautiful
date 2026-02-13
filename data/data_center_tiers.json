@@ -1,0 +1,75 @@
+{
+  "tier1": {
+    "label": "Tier 1 - Super Core",
+    "states": [
+      {"state": "New York", "type": "Super Core"},
+      {"state": "Georgia", "type": "Super Core"},
+      {"state": "Texas", "type": "Super Core"},
+      {"state": "California", "type": "Super Core"},
+      {"state": "Illinois", "type": "Super Core"},
+      {"state": "Washington", "type": "Super Core"},
+      {"state": "Florida", "type": "Super Core"},
+      {"state": "Colorado", "type": "Super Core"}
+    ]
+  },
+  "tier2": {
+    "label": "Tier 2 - Regional Core (Dual UPF)",
+    "states": [
+      {"state": "New York", "type": "Regional Core (Dual UPF)"},
+      {"state": "Pennsylvania", "type": "Regional Core (Dual UPF)"},
+      {"state": "New Jersey", "type": "Regional Core (Dual UPF)"},
+      {"state": "Florida", "type": "Regional Core (Dual UPF)"},
+      {"state": "Georgia", "type": "Regional Core (Dual UPF)"},
+      {"state": "North Carolina", "type": "Regional Core (Dual UPF)"},
+      {"state": "Ohio", "type": "Regional Core (Dual UPF)"},
+      {"state": "Maryland", "type": "Regional Core (Dual UPF)"},
+      {"state": "Kentucky", "type": "Regional Core (Dual UPF)"},
+      {"state": "California", "type": "Regional Core (Dual UPF)"},
+      {"state": "Washington", "type": "Regional Core (Dual UPF)"},
+      {"state": "Arizona", "type": "Regional Core (Dual UPF)"},
+      {"state": "Texas", "type": "Regional Core (Dual UPF)"},
+      {"state": "Tennessee", "type": "Regional Core (Dual UPF)"},
+      {"state": "Alabama", "type": "Regional Core (Dual UPF)"},
+      {"state": "Illinois", "type": "Regional Core (Dual UPF)"},
+      {"state": "Michigan", "type": "Regional Core (Dual UPF)"},
+      {"state": "Indiana", "type": "Regional Core (Dual UPF)"}
+    ]
+  },
+  "tier3": {
+    "label": "Tier 3 - Edge Data Centers",
+    "states": [
+      {"state": "Alaska", "type": "Edge Data Center"},
+      {"state": "Arkansas", "type": "Edge Data Center"},
+      {"state": "Colorado", "type": "Edge Data Center"},
+      {"state": "Connecticut", "type": "Edge Data Center"},
+      {"state": "Delaware", "type": "Edge Data Center"},
+      {"state": "Hawaii", "type": "Edge Data Center"},
+      {"state": "Idaho", "type": "Edge Data Center"},
+      {"state": "Iowa", "type": "Edge Data Center"},
+      {"state": "Kansas", "type": "Edge Data Center"},
+      {"state": "Louisiana", "type": "Edge Data Center"},
+      {"state": "Maine", "type": "Edge Data Center"},
+      {"state": "Massachusetts", "type": "Edge Data Center"},
+      {"state": "Minnesota", "type": "Edge Data Center"},
+      {"state": "Mississippi", "type": "Edge Data Center"},
+      {"state": "Missouri", "type": "Edge Data Center"},
+      {"state": "Wisconsin", "type": "Edge Data Center"},
+      {"state": "Montana", "type": "Edge Data Center"},
+      {"state": "Nebraska", "type": "Edge Data Center"},
+      {"state": "Nevada", "type": "Edge Data Center"},
+      {"state": "New Hampshire", "type": "Edge Data Center"},
+      {"state": "New Mexico", "type": "Edge Data Center"},
+      {"state": "North Dakota", "type": "Edge Data Center"},
+      {"state": "Oklahoma", "type": "Edge Data Center"},
+      {"state": "Oregon", "type": "Edge Data Center"},
+      {"state": "Rhode Island", "type": "Edge Data Center"},
+      {"state": "South Carolina", "type": "Edge Data Center"},
+      {"state": "South Dakota", "type": "Edge Data Center"},
+      {"state": "Utah", "type": "Edge Data Center"},
+      {"state": "Vermont", "type": "Edge Data Center"},
+      {"state": "Virginia", "type": "Edge Data Center"},
+      {"state": "West Virginia", "type": "Edge Data Center"},
+      {"state": "Wyoming", "type": "Edge Data Center"}
+    ]
+  }
+}
