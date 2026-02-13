@@ -52,6 +52,15 @@ async def get_city_coordinates() -> Dict[str, Any]:
         return {}
 
 
+@router.get("/hub-pairs")
+async def get_hub_pairs() -> Dict[str, Any]:
+    """Hub pairs by type: dual (Regional & Edge), single (Single Edge), superCore (Super Core)."""
+    try:
+        return _load_json("hub_pairs.json")
+    except HTTPException:
+        return {"dual": {"label": "", "pairs": []}, "single": {"label": "", "pairs": []}, "superCore": {"label": "", "pairs": []}}
+
+
 @router.get("/data-center-tiers")
 async def get_data_center_tiers() -> Dict[str, Any]:
     """Data center tiers (Tier 1 Super Core, Tier 2 Regional, Tier 3 Edge) by state."""

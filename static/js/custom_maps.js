@@ -18,6 +18,55 @@ const STATE_NAME_TO_ISO = {
 
 let cityCoords = null;
 let dataCenterTiersCache = null;
+let hubPairsDefaultCache = null;
+
+const HUB_PAIRS_COLORS = { dual: '#0284c7', single: '#16a34a', superCore: '#dc2626' };
+
+async function loadHubPairsDefault() {
+    if (hubPairsDefaultCache) return hubPairsDefaultCache;
+    try {
+        const r = await fetch('/api/analytics/hub-pairs');
+        const data = await r.json();
+        const coords = await loadCityCoords();
+        function resolveCoords(name) {
+            if (!name) return null;
+            let c = coords[name] || coords[name.replace(/\s*\([^)]*\)\s*$/, '').trim()];
+            if (c) return c;
+            const parts = String(name).split(/\s*\/\s*/).map(p => p.trim());
+            for (const p of parts) {
+                c = coords[p] || coords[p.replace(/\s*\([^)]*\)\s*$/, '').trim()];
+                if (c) return c;
+            }
+            return null;
+        }
+        const result = { dual: [], single: [], superCore: [] };
+        ['dual', 'single', 'superCore'].forEach(type => {
+            const pairs = data[type]?.pairs || [];
+            pairs.forEach(p => {
+                const h1 = (p.hub1 || p['Primary Location (Hub 1)'] || '').trim();
+                const h2 = (p.hub2 || p['Secondary Location (Hub 2)'] || '').trim();
+                const c1 = resolveCoords(h1);
+                if (!c1) return;
+                const c2 = h2 ? resolveCoords(h2) : null;
+                result[type].push({
+                    state: p.state,
+                    hub1: h1,
+                    hub2: h2,
+                    c1,
+                    c2,
+                    type,
+                    color: HUB_PAIRS_COLORS[type]
+                });
+            });
+        });
+        hubPairsDefaultCache = result;
+        window.__hubPairsByType = result;
+    } catch (e) {
+        hubPairsDefaultCache = { dual: [], single: [], superCore: [] };
+        window.__hubPairsByType = hubPairsDefaultCache;
+    }
+    return hubPairsDefaultCache;
+}
 
 async function loadDataCenterTiers() {
     if (dataCenterTiersCache) return dataCenterTiersCache;

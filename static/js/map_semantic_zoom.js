@@ -69,6 +69,19 @@ class MapVisualizer {
             '50': 'VT', '51': 'VA', '53': 'WA', '54': 'WV', '55': 'WI',
             '56': 'WY', '72': 'PR'
         };
+        this.isoToStateName = {
+            'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas', 'CA': 'California',
+            'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware', 'DC': 'Washington DC', 'FL': 'Florida',
+            'GA': 'Georgia', 'HI': 'Hawaii', 'ID': 'Idaho', 'IL': 'Illinois', 'IN': 'Indiana',
+            'IA': 'Iowa', 'KS': 'Kansas', 'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine',
+            'MD': 'Maryland', 'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi',
+            'MO': 'Missouri', 'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada', 'NH': 'New Hampshire',
+            'NJ': 'New Jersey', 'NM': 'New Mexico', 'NY': 'New York', 'NC': 'North Carolina', 'ND': 'North Dakota',
+            'OH': 'Ohio', 'OK': 'Oklahoma', 'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island',
+            'SC': 'South Carolina', 'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah',
+            'VT': 'Vermont', 'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia', 'WI': 'Wisconsin',
+            'WY': 'Wyoming', 'PR': 'Puerto Rico'
+        };
     }
     
     /**
@@ -388,23 +401,9 @@ class MapVisualizer {
      */
     getStateFill(d) {
         if (this.mapMode === 'data-centers') {
-            const stateValues = window.__dataCentersStateValues || {};
-            const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
-            const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
-            const value = iso ? (stateValues[iso] || '').trim() : '';
-            if (!value || value === 'None') return '#e2e8f0';
-            if (/super\s*core/i.test(value)) return '#0868ac';
-            return '#43a2ca';
+            return '#e2e8f0';
         }
         if (this.mapMode === 'dc-tiers') {
-            const tiers = window.__dataCenterTiers || { tier1: new Set(), tier2: new Set(), tier3: new Set() };
-            const visible = window.__dataCenterTiersVisible || { tier1: true, tier2: true, tier3: true };
-            const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
-            const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
-            if (!iso) return '#e2e8f0';
-            if (visible.tier1 && tiers.tier1 && tiers.tier1.has(iso)) return '#084081';
-            if (visible.tier2 && tiers.tier2 && tiers.tier2.has(iso)) return '#0868ac';
-            if (visible.tier3 && tiers.tier3 && tiers.tier3.has(iso)) return '#43a2ca';
             return '#e2e8f0';
         }
         if (this.mapMode === 'hub-pairs') {
@@ -417,18 +416,19 @@ class MapVisualizer {
     
     renderStateLabels() {
         /**
-         * Render text labels on each state using latitude/longitude coordinates.
-         * Labels show the current metric value for each state.
-         * Excludes "Others (Avg)" from display as per requirements.
-         * In data-centers/hub-pairs mode, labels are hidden.
+         * Render text labels on each state.
+         * Subscribers: state name + metric value.
+         * DC Tiers / Hub Pairs: state name only (using centroid).
          */
         
-        // Remove any existing labels
         this.g.selectAll('.state-label').remove();
         
+        if (this.mapMode === 'dc-tiers' || this.mapMode === 'hub-pairs' || this.mapMode === 'data-centers') {
+            this.renderStateNameLabels();
+            return;
+        }
         if (this.mapMode !== 'subscribers') return;
         
-        // Get state data excluding "Others (Avg)"
         const stateData = this.data.by_state.filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO);
         
         // Add labels for each state: state name (small) + subscriber value
@@ -468,6 +468,39 @@ class MapVisualizer {
         
         // Store reference to labels for zoom updates
         this.labels = labels;
+    }
+    
+    renderStateNameLabels() {
+        if (!this.statesFeatures) return;
+        const mapviz = this;
+        this.g.selectAll('.state-label')
+            .data(this.statesFeatures)
+            .join('text')
+            .attr('class', 'state-label')
+            .attr('x', d => {
+                const c = d3.geoCentroid(d);
+                const p = this.projection(c);
+                return p ? p[0] : 0;
+            })
+            .attr('y', d => {
+                const c = d3.geoCentroid(d);
+                const p = this.projection(c);
+                return p ? p[1] : 0;
+            })
+            .attr('text-anchor', 'middle')
+            .attr('dominant-baseline', 'middle')
+            .style('font-size', `${this.STATE_NAME_FONT_SIZE}px`)
+            .style('font-weight', 'normal')
+            .style('fill', '#1a1a1a')
+            .style('stroke', '#ffffff')
+            .style('stroke-width', '0.5px')
+            .style('paint-order', 'stroke')
+            .style('pointer-events', 'none')
+            .text(d => {
+                const fips = d.id != null ? String(d.id).padStart(2, '0') : null;
+                const iso = fips && this.fipsToIso[fips] ? this.fipsToIso[fips] : null;
+                return iso ? (this.isoToStateName[iso] || iso) : '';
+            });
     }
     
     updateStateLabels() {
@@ -511,28 +544,29 @@ class MapVisualizer {
         legendContainer.selectAll('*').remove();
         
         if (this.mapMode === 'data-centers') {
-            legendContainer.append('div').style('background-color', '#0868ac').style('flex', '1').style('height', '100%').style('min-width', '60px');
-            legendContainer.append('div').style('background-color', '#43a2ca').style('flex', '1').style('height', '100%').style('min-width', '60px');
-            legendContainer.append('div').style('background-color', '#e2e8f0').style('flex', '1').style('height', '100%').style('min-width', '60px');
+            legendContainer.append('div').style('background-color', '#084081').style('flex', '1').style('height', '100%').style('min-width', '60px').attr('title', 'Super Core');
+            legendContainer.append('div').style('background-color', '#0868ac').style('flex', '1').style('height', '100%').style('min-width', '60px').attr('title', 'Other DC');
             legendContainer.style('display', 'flex');
             if (!minLabel.empty()) minLabel.text('Super Core');
-            if (!maxLabel.empty()) maxLabel.text('No DC');
+            if (!maxLabel.empty()) maxLabel.text('Other');
             return;
         }
         if (this.mapMode === 'dc-tiers') {
-            legendContainer.append('div').style('background-color', '#084081').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Tier 1 - Super Core');
-            legendContainer.append('div').style('background-color', '#0868ac').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Tier 2 - Regional');
-            legendContainer.append('div').style('background-color', '#43a2ca').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Tier 3 - Edge');
-            legendContainer.append('div').style('background-color', '#e2e8f0').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'No DC');
+            legendContainer.append('div').style('background-color', '#084081').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Tier 1 - Super Core (circle)');
+            legendContainer.append('div').style('background-color', '#0868ac').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Tier 2 - Regional (square)');
+            legendContainer.append('div').style('background-color', '#43a2ca').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Tier 3 - Edge (triangle)');
             legendContainer.style('display', 'flex');
             if (!minLabel.empty()) minLabel.text('Tier 1');
-            if (!maxLabel.empty()) maxLabel.text('None');
+            if (!maxLabel.empty()) maxLabel.text('Tier 3');
             return;
         }
         if (this.mapMode === 'hub-pairs') {
-            legendContainer.append('div').style('background-color', '#e2e8f0').style('flex', '1').style('height', '100%');
-            if (!minLabel.empty()) minLabel.text('Hub pairs');
-            if (!maxLabel.empty()) maxLabel.text('');
+            legendContainer.append('div').style('background-color', '#0284c7').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Dual (Regional & Edge)');
+            legendContainer.append('div').style('background-color', '#16a34a').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Single Edge');
+            legendContainer.append('div').style('background-color', '#dc2626').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Super Core');
+            legendContainer.style('display', 'flex');
+            if (!minLabel.empty()) minLabel.text('Dual');
+            if (!maxLabel.empty()) maxLabel.text('Super');
             return;
         }
         
@@ -569,21 +603,63 @@ class MapVisualizer {
         this.clearStateCentroidDots();
         if (!this.statesFeatures) return;
         const layer = this.g.append('g').attr('class', 'state-centroid-dots');
+        const tierColors = { tier1: '#084081', tier2: '#0868ac', tier3: '#43a2ca' };
+        const shapeSize = 6;
+        const offsetStep = 10;
         this.statesFeatures.forEach(d => {
-            const hasData = this.stateHasDcData(d);
-            if (!hasData) return;
+            if (this.mapMode === 'data-centers') {
+                const stateValues = window.__dataCentersStateValues || {};
+                const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
+                const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
+                const value = iso ? (stateValues[iso] || '').trim() : '';
+                if (!value || value === 'None') return;
+                const centroid = d3.geoCentroid(d);
+                const projected = this.projection(centroid);
+                if (!projected) return;
+                const color = /super\s*core/i.test(value) ? '#084081' : '#0868ac';
+                layer.append('circle').attr('cx', projected[0]).attr('cy', projected[1]).attr('r', shapeSize)
+                    .attr('fill', color).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
+                return;
+            }
+            const activeTiers = this.getActiveTiersForState(d);
+            if (activeTiers.length === 0) return;
             const centroid = d3.geoCentroid(d);
             const projected = this.projection(centroid);
             if (!projected) return;
-            const fillColor = this.getStateFill(d);
-            layer.append('circle')
-                .attr('cx', projected[0]).attr('cy', projected[1])
-                .attr('r', 7)
-                .attr('fill', fillColor)
-                .attr('stroke', this.DC_MODE_STROKE_COLOR)
-                .attr('stroke-width', 2)
-                .style('pointer-events', 'none');
+            const [cx, cy] = projected;
+            const totalWidth = (activeTiers.length - 1) * offsetStep;
+            const startX = cx - totalWidth / 2;
+            activeTiers.forEach((tier, i) => {
+                const x = activeTiers.length === 1 ? cx : startX + i * offsetStep;
+                const color = tierColors[tier] || '#43a2ca';
+                if (tier === 'tier1') {
+                    layer.append('circle').attr('cx', x).attr('cy', cy).attr('r', shapeSize)
+                        .attr('fill', color).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
+                } else if (tier === 'tier2') {
+                    const s = shapeSize * 1.2;
+                    layer.append('rect').attr('x', x - s).attr('y', cy - s).attr('width', s * 2).attr('height', s * 2)
+                        .attr('fill', color).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
+                } else {
+                    const r = shapeSize * 1.3;
+                    const path = `M ${x} ${cy - r} L ${x + r} ${cy + r} L ${x - r} ${cy + r} Z`;
+                    layer.append('path').attr('d', path)
+                        .attr('fill', color).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
+                }
+            });
         });
+    }
+    
+    getActiveTiersForState(d) {
+        const tiers = window.__dataCenterTiers || { tier1: new Set(), tier2: new Set(), tier3: new Set() };
+        const visible = window.__dataCenterTiersVisible || { tier1: true, tier2: true, tier3: true };
+        const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
+        const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
+        if (!iso) return [];
+        const active = [];
+        if (visible.tier1 && tiers.tier1?.has(iso)) active.push('tier1');
+        if (visible.tier2 && tiers.tier2?.has(iso)) active.push('tier2');
+        if (visible.tier3 && tiers.tier3?.has(iso)) active.push('tier3');
+        return active;
     }
     
     stateHasDcData(d) {
@@ -605,29 +681,36 @@ class MapVisualizer {
     
     renderHubPairsDots() {
         this.clearHubPairsDots();
-        const pairs = window.__hubPairs || [];
-        if (pairs.length === 0) return;
+        const byType = window.__hubPairsByType;
+        const custom = window.__hubPairs || [];
         const layer = this.g.append('g').attr('class', 'hub-dots-layer');
-        pairs.forEach(p => {
-            const p1 = this.projection(p.c1);
-            const p2 = this.projection(p.c2);
+        const drawPair = (p, isCustom) => {
+            const c1 = p.c1;
+            const c2 = p.c2 || (isCustom ? null : null);
+            const p1 = this.projection(c1);
+            const p2 = c2 ? this.projection(c2) : null;
+            const color = p.color || '#0284c7';
             if (p1 && p2) {
                 layer.append('line')
                     .attr('x1', p1[0]).attr('y1', p1[1]).attr('x2', p2[0]).attr('y2', p2[1])
-                    .attr('stroke', p.color).attr('stroke-width', 2.5).attr('stroke-opacity', 0.7);
+                    .attr('stroke', color).attr('stroke-width', 2.5).attr('stroke-opacity', 0.8);
             }
-            [p1, p2].forEach(proj => {
-                if (proj) {
-                    layer.append('circle')
-                        .attr('cx', proj[0]).attr('cy', proj[1])
-                        .attr('r', 8)
-                        .attr('fill', p.color)
-                        .attr('stroke', this.DC_MODE_STROKE_COLOR)
-                        .attr('stroke-width', 2)
-                        .style('pointer-events', 'none');
-                }
+            [p1, p2].filter(Boolean).forEach(proj => {
+                layer.append('circle')
+                    .attr('cx', proj[0]).attr('cy', proj[1]).attr('r', 7)
+                    .attr('fill', color).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2)
+                    .style('pointer-events', 'none');
             });
-        });
+        };
+        const visible = window.__hubPairsVisible || { dual: true, single: true, superCore: true };
+        if (custom.length > 0) {
+            custom.forEach(p => drawPair(p, true));
+        } else if (byType && (byType.dual?.length || byType.single?.length || byType.superCore?.length)) {
+            ['dual', 'superCore', 'single'].forEach(t => {
+                if (!visible[t]) return;
+                (byType[t] || []).forEach(p => drawPair(p, false));
+            });
+        }
     }
     
     handleMouseOver(event, d) {
@@ -659,19 +742,23 @@ class MapVisualizer {
         if (this.mapMode === 'hub-pairs') {
             const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
             const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
-            const stateName = (this.data?.by_state?.find(s => s.state_iso === iso)?.state_name) || (d.properties?.name) || iso || 'Unknown';
-            const pairs = window.__hubPairs || [];
-            const pair = pairs.find(p => {
-                const s = (p.state || p.State || '').trim();
-                return s && typeof stateNameToIso === 'function' && stateNameToIso(s) === iso;
-            });
-            let content = 'No hub pair';
-            if (pair) {
-                const h1 = pair.hub1 || pair['Primary Location (Hub 1)'] || '';
-                const h2 = pair.hub2 || pair['Secondary Location (Hub 2)'] || '';
-                content = `Hub 1: ${h1}<br>Hub 2: ${h2}`;
+            const stateName = this.isoToStateName[iso] || (this.data?.by_state?.find(s => s.state_iso === iso)?.state_name) || iso || 'Unknown';
+            const byType = window.__hubPairsByType;
+            const custom = window.__hubPairs || [];
+            const findPair = (list) => list?.find(p => typeof stateNameToIso === 'function' && stateNameToIso(p.state) === iso);
+            let pair = findPair(custom);
+            let typeLabel = '';
+            if (!pair && byType) {
+                pair = findPair(byType.dual) || findPair(byType.superCore) || findPair(byType.single);
+                if (pair) typeLabel = pair.type === 'dual' ? ' (Dual)' : pair.type === 'superCore' ? ' (Super Core)' : ' (Single Edge)';
             }
-            this.tooltip.style('opacity', 1).html(`<div class="tooltip-title">${stateName}</div><div class="tooltip-content">${content}</div>`);
+            let content = 'No hub';
+            if (pair) {
+                const h1 = pair.hub1 || '';
+                const h2 = pair.hub2 || '';
+                content = h2 ? `Hub 1: ${h1}<br>Hub 2: ${h2}` : `Hub: ${h1}`;
+            }
+            this.tooltip.style('opacity', 1).html(`<div class="tooltip-title">${stateName}${typeLabel}</div><div class="tooltip-content">${content}</div>`);
             return;
         }
         
@@ -789,8 +876,10 @@ class MapVisualizer {
         this.mapMode = mode;
         const metricGroup = document.getElementById('metric-control-group');
         const dcTiersGroup = document.getElementById('dc-tiers-control-group');
+        const hubPairsGroup = document.getElementById('hub-pairs-control-group');
         if (metricGroup) metricGroup.style.display = mode === 'subscribers' ? '' : 'none';
         if (dcTiersGroup) dcTiersGroup.style.display = mode === 'dc-tiers' ? '' : 'none';
+        if (hubPairsGroup) hubPairsGroup.style.display = mode === 'hub-pairs' ? '' : 'none';
         
         if (mode === 'dc-tiers') {
             window.__dataCenterTiersVisible = {
@@ -813,7 +902,15 @@ class MapVisualizer {
             .attr('stroke-width', strokeW);
         
         if (mode === 'hub-pairs') {
+            window.__hubPairsVisible = {
+                dual: document.getElementById('hub-dual-toggle')?.checked ?? true,
+                single: document.getElementById('hub-single-toggle')?.checked ?? true,
+                superCore: document.getElementById('hub-super-toggle')?.checked ?? true
+            };
             this.clearStateCentroidDots();
+            if (typeof loadHubPairsDefault === 'function') {
+                await loadHubPairsDefault();
+            }
             this.renderHubPairsDots();
         } else if (mode === 'data-centers' || mode === 'dc-tiers') {
             this.clearHubPairsDots();
@@ -879,6 +976,22 @@ class MapVisualizer {
                             .transition().duration(300)
                             .attr('fill', d => this.getStateFill(d));
                         this.renderStateCentroidDots();
+                    }
+                });
+            }
+        });
+        // Hub Pairs toggles
+        ['hub-dual-toggle', 'hub-single-toggle', 'hub-super-toggle'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('change', () => {
+                    if (this.mapMode === 'hub-pairs') {
+                        window.__hubPairsVisible = {
+                            dual: document.getElementById('hub-dual-toggle')?.checked ?? true,
+                            single: document.getElementById('hub-single-toggle')?.checked ?? true,
+                            superCore: document.getElementById('hub-super-toggle')?.checked ?? true
+                        };
+                        this.renderHubPairsDots();
                     }
                 });
             }
