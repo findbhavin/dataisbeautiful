@@ -198,20 +198,23 @@ class MapVisualizer {
     }
     
     /**
-     * Load topology/geography. US: TopoJSON, India: GeoJSON.
+     * Load topology/geography. Both US and India use TopoJSON.
      */
     async loadTopology() {
         if (this.country === 'india') {
             try {
-                const geojson = await d3.json('/api/geo/india/geojson/states');
-                if (!geojson || !geojson.features || geojson.features.length === 0) {
-                    throw new Error('India GeoJSON has no features');
+                const indiaTopoJson = await d3.json('/api/geo/topojson/india-states');
+                if (!indiaTopoJson || !indiaTopoJson.objects || !indiaTopoJson.objects.states) {
+                    throw new Error('India TopoJSON has invalid structure');
                 }
-                console.log('✓ Loaded India GeoJSON:', geojson.features.length, 'states');
-                return { type: 'geojson', data: geojson };
+                if (!indiaTopoJson.arcs || indiaTopoJson.arcs.length === 0) {
+                    throw new Error('India TopoJSON has no arc data');
+                }
+                console.log('✓ Loaded India TopoJSON:', indiaTopoJson.objects.states.geometries.length, 'states');
+                return { type: 'topojson', data: indiaTopoJson };
             } catch (e) {
-                console.error('India GeoJSON failed:', e);
-                throw new Error('Unable to load India map. Run: python scripts/download_india_geojson.py');
+                console.error('India TopoJSON failed:', e);
+                throw new Error('Unable to load India map. Ensure data/topojson/india_states.topo.json exists with valid geographic data.');
             }
         }
         const localPath = '/api/geo/topojson/states';
@@ -236,21 +239,19 @@ class MapVisualizer {
         try {
             const topo = await this.loadTopology();
             let states;
-            if (topo.type === 'geojson') {
-                states = topo.data;
-            } else {
-                const us = topo.data;
-                if (!us || !us.objects || !us.objects.states) {
-                    console.error('Invalid TopoJSON structure:', us);
-                    this.showError('Map data is unavailable. Please refresh the page.');
-                    return;
-                }
-                if (!us.arcs || us.arcs.length === 0) {
-                    this.showError('Map topology data is incomplete. Run ./scripts/download_dependencies.sh');
-                    return;
-                }
-                states = topojson.feature(us, us.objects.states);
+            
+            // Both US and India now use TopoJSON
+            const topoData = topo.data;
+            if (!topoData || !topoData.objects || !topoData.objects.states) {
+                console.error('Invalid TopoJSON structure:', topoData);
+                this.showError('Map data is unavailable. Please refresh the page.');
+                return;
             }
+            if (!topoData.arcs || topoData.arcs.length === 0) {
+                this.showError('Map topology data is incomplete. Check the TopoJSON file.');
+                return;
+            }
+            states = topojson.feature(topoData, topoData.objects.states);
             
             this.debugLog(`Loaded ${states.features.length} state features from TopoJSON`);
             
@@ -363,7 +364,17 @@ class MapVisualizer {
     
     getStateDataForFeature(feature) {
         if (this.country === 'india') {
-            const name = feature.properties?.NAME_1 || feature.properties?.name;
+            // Try matching by state_iso (from TopoJSON id)
+            const stateIso = feature.id || feature.properties?.state_iso;
+            if (stateIso) {
+                const matchByIso = this.data.by_state.find(d =>
+                    d.state_iso && d.state_iso.toUpperCase() === String(stateIso).toUpperCase()
+                );
+                if (matchByIso) return matchByIso;
+            }
+            
+            // Try matching by name
+            const name = feature.properties?.name || feature.properties?.NAME_1;
             if (!name) return null;
             return this.data.by_state.find(d =>
                 d.state_name && d.state_name.toLowerCase() === String(name).toLowerCase()
