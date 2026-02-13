@@ -1,0 +1,41 @@
+{
+  "national_metrics": {
+    "total_population": 349,
+    "mobile_phone_base": 333.0,
+    "postpaid_phone": 266.5,
+    "prepaid_phone": 66.5,
+    "mobile_penetration_pct": 95.4,
+    "postpaid_arpu": 52.50,
+    "prepaid_arpu": 31.20,
+    "carriers": {
+      "verizon": { "total": 114.3, "postpaid": 94.0, "prepaid": 20.3, "postpaid_arpu": 57.10, "prepaid_arpu": 32.90, "5g_share_pct": 79, "4g_share_pct": 21 },
+      "tmobile": { "total": 123.6, "postpaid": 101.3, "prepaid": 22.3, "postpaid_arpu": 49.20, "prepaid_arpu": 33.93, "5g_share_pct": 84, "4g_share_pct": 16 },
+      "att": { "total": 88.2, "postpaid": 69.9, "prepaid": 18.3, "postpaid_arpu": 56.64, "prepaid_arpu": 25.20, "5g_share_pct": 80, "4g_share_pct": 20 },
+      "others": { "total": 6.9, "postpaid": 1.3, "prepaid": 5.6, "postpaid_arpu": 35.00, "prepaid_arpu": 28.00, "5g_share_pct": 75, "4g_share_pct": 25 }
+    }
+  },
+  "market_share": [
+    { "carrier": "Verizon", "subscriber_share_pct": 33.4, "revenue_share_pct": 38.5, "insight": "Monetizes users best; dominant in B2B & Gov." },
+    { "carrier": "T-Mobile", "subscriber_share_pct": 36.1, "revenue_share_pct": 31.5, "insight": "Leader in volume; gap in B2B revenue vs VZ." },
+    { "carrier": "AT&T", "subscriber_share_pct": 25.0, "revenue_share_pct": 29.5, "insight": "Strong alignment between subs and revenue." },
+    { "carrier": "Others (Cable/Dish)", "subscriber_share_pct": 5.5, "revenue_share_pct": 3.5, "insight": "High growth, but ARPU diluted by aggressive bundling." }
+  ],
+  "financial_scorecard": [
+    { "operator": "Verizon", "total_revenue_b": 138.2, "wireless_revenue_b": 83.7, "yoy_growth_pct": 2.0, "postpaid_arpu": 57.10, "ebitda_b": 50.0, "capex_b": 17.0 },
+    { "operator": "AT&T", "total_revenue_b": 125.6, "wireless_revenue_b": 67.4, "yoy_growth_pct": 3.1, "postpaid_arpu": 56.64, "ebitda_b": 44.8, "capex_b": 22.0 },
+    { "operator": "T-Mobile", "total_revenue_b": 88.0, "wireless_revenue_b": 71.0, "yoy_growth_pct": 5.0, "postpaid_arpu": 49.20, "ebitda_b": 33.5, "capex_b": 9.5 },
+    { "operator": "Cable (Combined)", "total_revenue_b": null, "wireless_revenue_b": 7.5, "yoy_growth_pct": 15, "postpaid_arpu": 35.00, "ebitda_b": null, "capex_b": null }
+  ],
+  "top10_states": [
+    { "rank": 1, "state": "California", "customers_m": 38.6, "primary_operator": "T-Mobile (Aggressive 5G)" },
+    { "rank": 2, "state": "Texas", "customers_m": 29.8, "primary_operator": "AT&T (Regional Stronghold)" },
+    { "rank": 3, "state": "Florida", "customers_m": 22.1, "primary_operator": "Mixed" },
+    { "rank": 4, "state": "New York", "customers_m": 19.3, "primary_operator": "Verizon (Mid-Atlantic Dominance)" },
+    { "rank": 5, "state": "Pennsylvania", "customers_m": 12.8, "primary_operator": "Verizon" },
+    { "rank": 6, "state": "Illinois", "customers_m": 12.4, "primary_operator": "Mixed" },
+    { "rank": 7, "state": "Ohio", "customers_m": 11.6, "primary_operator": "Mixed" },
+    { "rank": 8, "state": "Georgia", "customers_m": 10.8, "primary_operator": "AT&T" },
+    { "rank": 9, "state": "North Carolina", "customers_m": 10.6, "primary_operator": "Mixed" },
+    { "rank": 10, "state": "Michigan", "customers_m": 10.0, "primary_operator": "Mixed" }
+  ]
+}
