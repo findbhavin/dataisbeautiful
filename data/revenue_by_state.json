@@ -1,0 +1,15 @@
+{
+  "revenue_top10": [
+    { "rank": 1, "state": "California", "customers_m": 38.6, "dominance": "T-Mobile/Mixed", "revenue_premium": 1.00, "monthly_revenue_m": 1910, "annual_revenue_b": 22.9 },
+    { "rank": 2, "state": "Texas", "customers_m": 29.8, "dominance": "AT&T (Strong)", "revenue_premium": 1.02, "monthly_revenue_m": 1505, "annual_revenue_b": 18.1 },
+    { "rank": 3, "state": "Florida", "customers_m": 22.1, "dominance": "AT&T/Prepaid", "revenue_premium": 0.96, "monthly_revenue_m": 1050, "annual_revenue_b": 12.6 },
+    { "rank": 4, "state": "New York", "customers_m": 19.3, "dominance": "Verizon (Dominant)", "revenue_premium": 1.12, "monthly_revenue_m": 1070, "annual_revenue_b": 12.8 },
+    { "rank": 5, "state": "Pennsylvania", "customers_m": 12.8, "dominance": "Verizon (Strong)", "revenue_premium": 1.05, "monthly_revenue_m": 665, "annual_revenue_b": 8.0 },
+    { "rank": 6, "state": "Illinois", "customers_m": 12.4, "dominance": "Mixed", "revenue_premium": 1.00, "monthly_revenue_m": 615, "annual_revenue_b": 7.4 },
+    { "rank": 7, "state": "Ohio", "customers_m": 11.6, "dominance": "Verizon/T-Mobile", "revenue_premium": 0.95, "monthly_revenue_m": 545, "annual_revenue_b": 6.5 },
+    { "rank": 8, "state": "Georgia", "customers_m": 10.8, "dominance": "AT&T (HQ)", "revenue_premium": 1.03, "monthly_revenue_m": 550, "annual_revenue_b": 6.6 },
+    { "rank": 9, "state": "North Carolina", "customers_m": 10.6, "dominance": "T-Mobile (Growing)", "revenue_premium": 0.98, "monthly_revenue_m": 515, "annual_revenue_b": 6.2 },
+    { "rank": 10, "state": "Michigan", "customers_m": 10.0, "dominance": "T-Mobile/Verizon", "revenue_premium": 0.95, "monthly_revenue_m": 470, "annual_revenue_b": 5.6 }
+  ],
+  "totals": { "top10_customers_m": 178, "top10_annual_b": 106.7, "rest_annual_b": 94.3, "total_annual_b": 201.0 }
+}
