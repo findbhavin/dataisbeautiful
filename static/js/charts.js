@@ -46,10 +46,22 @@ function hideTooltip() {
     chartTooltip().style('opacity', 0);
 }
 
+function ensureContainerVisible(containerId) {
+    const el = document.getElementById(containerId);
+    if (!el) return false;
+    const parent = el.closest('.tab-content');
+    return !parent || parent.classList.contains('active');
+}
+
 async function renderMarketSharePie(containerId, data) {
     const container = d3.select(`#${containerId}`);
+    if (container.empty()) return;
     container.selectAll('*').remove();
-    if (!data || !data.market_share) return;
+    if (!data || !data.market_share || !Array.isArray(data.market_share) || data.market_share.length === 0) {
+        container.append('p').attr('class', 'chart-error').text('No market share data available.');
+        return;
+    }
+    if (!ensureContainerVisible(containerId)) return;
 
     // Donut chart: center shows total; slices show subscriber share
     const width = 420, height = 420, radius = Math.min(width, height) / 2 - 50;
@@ -112,8 +124,13 @@ async function renderMarketSharePie(containerId, data) {
 
 async function renderMetrosBar(containerId, data) {
     const container = d3.select(`#${containerId}`);
+    if (container.empty()) return;
     container.selectAll('*').remove();
-    if (!data || !data.top10_metros) return;
+    if (!data || !data.top10_metros || !Array.isArray(data.top10_metros) || data.top10_metros.length === 0) {
+        container.append('p').attr('class', 'chart-error').text('No metro data available.');
+        return;
+    }
+    if (!ensureContainerVisible(containerId)) return;
 
     // Single stacked bar per metro: multicolor segments for each carrier
     const margin = { top: 20, right: 80, bottom: 40, left: 120 };
@@ -169,8 +186,13 @@ async function renderMetrosBar(containerId, data) {
 
 async function renderSpectrumBar(containerId, data) {
     const container = d3.select(`#${containerId}`);
+    if (container.empty()) return;
     container.selectAll('*').remove();
-    if (!data || !data.spectrum_depth_nationwide) return;
+    if (!data || !data.spectrum_depth_nationwide || !Array.isArray(data.spectrum_depth_nationwide) || data.spectrum_depth_nationwide.length === 0) {
+        container.append('p').attr('class', 'chart-error').text('No spectrum data available.');
+        return;
+    }
+    if (!ensureContainerVisible(containerId)) return;
 
     const margin = { top: 24, right: 30, bottom: 50, left: 55 };
     const width = 720 - margin.left - margin.right;
@@ -220,8 +242,13 @@ async function renderSpectrumBar(containerId, data) {
 
 async function renderRevenueBar(containerId, data) {
     const container = d3.select(`#${containerId}`);
+    if (container.empty()) return;
     container.selectAll('*').remove();
-    if (!data || !data.revenue_top10) return;
+    if (!data || !data.revenue_top10 || !Array.isArray(data.revenue_top10) || data.revenue_top10.length === 0) {
+        container.append('p').attr('class', 'chart-error').text('No revenue data available.');
+        return;
+    }
+    if (!ensureContainerVisible(containerId)) return;
 
     const states = data.revenue_top10;
     const count = states.length;
@@ -235,8 +262,6 @@ async function renderRevenueBar(containerId, data) {
 
     const svg = container.append('svg').attr('width', width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom)
         .append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-
-    const states = data.revenue_top10;
     const y = d3.scaleBand().domain(states.map(d => d.state)).range([0, height]).padding(0.2);
     const x = d3.scaleLinear().domain([0, d3.max(states, d => d.annual_revenue_b) * 1.05]).range([0, width]);
 
@@ -271,8 +296,13 @@ async function renderRevenueBar(containerId, data) {
 
 async function renderTopStatesBar(containerId, data, operatorKey) {
     const container = d3.select(`#${containerId}`);
+    if (container.empty()) return;
     container.selectAll('*').remove();
-    if (!data || !data.top10_states) return;
+    if (!data || !data.top10_states || !Array.isArray(data.top10_states) || data.top10_states.length === 0) {
+        container.append('p').attr('class', 'chart-error').text('No top states data available.');
+        return;
+    }
+    if (!ensureContainerVisible(containerId)) return;
 
     const margin = { top: 20, right: 60, bottom: 30, left: 100 };
     const width = 700 - margin.left - margin.right;
