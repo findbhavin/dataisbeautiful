@@ -17,7 +17,7 @@ class MapVisualizer {
         this.containerId = containerId;
         this.data = null;
         this.currentMetric = 'total_subscribers';
-        this.mapMode = 'subscribers';  // 'subscribers' | 'data-centers' | 'hub-pairs'
+        this.mapMode = 'subscribers';  // 'subscribers' | 'data-centers' | 'dc-tiers' | 'hub-pairs'
         this.colorScale = null;
         this.statesFeatures = null;  // Store for re-styling in different modes
         this.projection = null;
@@ -45,6 +45,8 @@ class MapVisualizer {
         // CSS also uses dark gray (#333333) to ensure visibility regardless of style precedence
         this.STATE_STROKE_COLOR = '#1f2937';  // Dark gray borders for visibility
         this.STATE_STROKE_WIDTH = 1;  // Balanced stroke width (CSS fallback is 0.5px)
+        this.DC_MODE_STROKE_WIDTH = 2;  // Stronger borders for Data Centers / Hub Pairs
+        this.DC_MODE_STROKE_COLOR = '#0f172a';  // Darker stroke for DC modes
         this.STATE_FILL_OPACITY = 0.9;  // Slightly higher opacity for better color saturation
         
         // ColorBrewer YlGnBu sequential (colorblind-friendly); lighter palette for light theme
@@ -242,14 +244,17 @@ class MapVisualizer {
             
             // Draw states with proper data matching
             this.debugLog(`[MapVisualizer] Drawing states with styling: stroke=${this.STATE_STROKE_COLOR}, stroke-width=${this.STATE_STROKE_WIDTH}, fill-opacity=${this.STATE_FILL_OPACITY}`);
+            const isDcMode = ['data-centers', 'dc-tiers', 'hub-pairs'].includes(this.mapMode);
+            const strokeW = isDcMode ? this.DC_MODE_STROKE_WIDTH : this.STATE_STROKE_WIDTH;
+            const strokeC = isDcMode ? this.DC_MODE_STROKE_COLOR : this.STATE_STROKE_COLOR;
             const statePaths = this.g.selectAll('.state')
                 .data(states.features)
                 .join('path')
                 .attr('class', 'state')
                 .attr('d', this.path)
                 .attr('fill', d => this.getStateFill(d))
-                .attr('stroke', this.STATE_STROKE_COLOR)
-                .attr('stroke-width', this.STATE_STROKE_WIDTH)
+                .attr('stroke', strokeC)
+                .attr('stroke-width', strokeW)
                 .style('fill-opacity', this.STATE_FILL_OPACITY)
                 .on('mouseover', (event, d) => this.handleMouseOver(event, d))
                 .on('mousemove', (event, d) => this.handleMouseMove(event, d))
@@ -391,6 +396,17 @@ class MapVisualizer {
             if (/super\s*core/i.test(value)) return '#0868ac';
             return '#43a2ca';
         }
+        if (this.mapMode === 'dc-tiers') {
+            const tiers = window.__dataCenterTiers || { tier1: new Set(), tier2: new Set(), tier3: new Set() };
+            const visible = window.__dataCenterTiersVisible || { tier1: true, tier2: true, tier3: true };
+            const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
+            const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
+            if (!iso) return '#e2e8f0';
+            if (visible.tier1 && tiers.tier1 && tiers.tier1.has(iso)) return '#084081';
+            if (visible.tier2 && tiers.tier2 && tiers.tier2.has(iso)) return '#0868ac';
+            if (visible.tier3 && tiers.tier3 && tiers.tier3.has(iso)) return '#43a2ca';
+            return '#e2e8f0';
+        }
         if (this.mapMode === 'hub-pairs') {
             return '#e2e8f0';
         }
@@ -503,6 +519,16 @@ class MapVisualizer {
             if (!maxLabel.empty()) maxLabel.text('No DC');
             return;
         }
+        if (this.mapMode === 'dc-tiers') {
+            legendContainer.append('div').style('background-color', '#084081').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Tier 1 - Super Core');
+            legendContainer.append('div').style('background-color', '#0868ac').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Tier 2 - Regional');
+            legendContainer.append('div').style('background-color', '#43a2ca').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Tier 3 - Edge');
+            legendContainer.append('div').style('background-color', '#e2e8f0').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'No DC');
+            legendContainer.style('display', 'flex');
+            if (!minLabel.empty()) minLabel.text('Tier 1');
+            if (!maxLabel.empty()) maxLabel.text('None');
+            return;
+        }
         if (this.mapMode === 'hub-pairs') {
             legendContainer.append('div').style('background-color', '#e2e8f0').style('flex', '1').style('height', '100%');
             if (!minLabel.empty()) minLabel.text('Hub pairs');
@@ -535,6 +561,48 @@ class MapVisualizer {
         this.g.selectAll('.hub-dots-layer').remove();
     }
     
+    clearStateCentroidDots() {
+        this.g.selectAll('.state-centroid-dots').remove();
+    }
+    
+    renderStateCentroidDots() {
+        this.clearStateCentroidDots();
+        if (!this.statesFeatures) return;
+        const layer = this.g.append('g').attr('class', 'state-centroid-dots');
+        this.statesFeatures.forEach(d => {
+            const hasData = this.stateHasDcData(d);
+            if (!hasData) return;
+            const centroid = d3.geoCentroid(d);
+            const projected = this.projection(centroid);
+            if (!projected) return;
+            const fillColor = this.getStateFill(d);
+            layer.append('circle')
+                .attr('cx', projected[0]).attr('cy', projected[1])
+                .attr('r', 7)
+                .attr('fill', fillColor)
+                .attr('stroke', this.DC_MODE_STROKE_COLOR)
+                .attr('stroke-width', 2)
+                .style('pointer-events', 'none');
+        });
+    }
+    
+    stateHasDcData(d) {
+        const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
+        const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
+        if (!iso) return false;
+        if (this.mapMode === 'data-centers') {
+            const stateValues = window.__dataCentersStateValues || {};
+            const value = (stateValues[iso] || '').trim();
+            return !!value && value !== 'None';
+        }
+        if (this.mapMode === 'dc-tiers') {
+            const tiers = window.__dataCenterTiers || { tier1: new Set(), tier2: new Set(), tier3: new Set() };
+            const visible = window.__dataCenterTiersVisible || { tier1: true, tier2: true, tier3: true };
+            return (visible.tier1 && tiers.tier1?.has(iso)) || (visible.tier2 && tiers.tier2?.has(iso)) || (visible.tier3 && tiers.tier3?.has(iso));
+        }
+        return false;
+    }
+    
     renderHubPairsDots() {
         this.clearHubPairsDots();
         const pairs = window.__hubPairs || [];
@@ -546,36 +614,76 @@ class MapVisualizer {
             if (p1 && p2) {
                 layer.append('line')
                     .attr('x1', p1[0]).attr('y1', p1[1]).attr('x2', p2[0]).attr('y2', p2[1])
-                    .attr('stroke', p.color).attr('stroke-width', 2).attr('stroke-opacity', 0.6);
+                    .attr('stroke', p.color).attr('stroke-width', 2.5).attr('stroke-opacity', 0.7);
             }
-            if (p1) {
-                layer.append('circle')
-                    .attr('cx', p1[0]).attr('cy', p1[1])
-                    .attr('r', 5).attr('fill', p.color).attr('stroke', '#1f2937').attr('stroke-width', 1);
-            }
-            if (p2) {
-                layer.append('circle')
-                    .attr('cx', p2[0]).attr('cy', p2[1])
-                    .attr('r', 5).attr('fill', p.color).attr('stroke', '#1f2937').attr('stroke-width', 1);
-            }
+            [p1, p2].forEach(proj => {
+                if (proj) {
+                    layer.append('circle')
+                        .attr('cx', proj[0]).attr('cy', proj[1])
+                        .attr('r', 8)
+                        .attr('fill', p.color)
+                        .attr('stroke', this.DC_MODE_STROKE_COLOR)
+                        .attr('stroke-width', 2)
+                        .style('pointer-events', 'none');
+                }
+            });
         });
     }
     
     handleMouseOver(event, d) {
+        d3.select(event.currentTarget).style('opacity', 0.8);
+        
+        if (this.mapMode === 'data-centers') {
+            const stateValues = window.__dataCentersStateValues || {};
+            const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
+            const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
+            const stateName = (this.data?.by_state?.find(s => s.state_iso === iso)?.state_name) || (d.properties?.name) || iso || 'Unknown';
+            const value = iso ? (stateValues[iso] || '').trim() : '';
+            const typeStr = value && value !== 'None' ? value : 'No data center';
+            this.tooltip.style('opacity', 1).html(`<div class="tooltip-title">${stateName}</div><div class="tooltip-content">${typeStr}</div>`);
+            return;
+        }
+        if (this.mapMode === 'dc-tiers') {
+            const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
+            const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
+            const stateName = (this.data?.by_state?.find(s => s.state_iso === iso)?.state_name) || (d.properties?.name) || iso || 'Unknown';
+            const tiers = window.__dataCenterTiers || { tier1: new Set(), tier2: new Set(), tier3: new Set() };
+            const labels = [];
+            if (tiers.tier1?.has(iso)) labels.push('Tier 1 - Super Core');
+            if (tiers.tier2?.has(iso)) labels.push('Tier 2 - Regional');
+            if (tiers.tier3?.has(iso)) labels.push('Tier 3 - Edge');
+            const tierStr = labels.length ? labels.join(', ') : 'No data center';
+            this.tooltip.style('opacity', 1).html(`<div class="tooltip-title">${stateName}</div><div class="tooltip-content">${tierStr}</div>`);
+            return;
+        }
+        if (this.mapMode === 'hub-pairs') {
+            const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
+            const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
+            const stateName = (this.data?.by_state?.find(s => s.state_iso === iso)?.state_name) || (d.properties?.name) || iso || 'Unknown';
+            const pairs = window.__hubPairs || [];
+            const pair = pairs.find(p => {
+                const s = (p.state || p.State || '').trim();
+                return s && typeof stateNameToIso === 'function' && stateNameToIso(s) === iso;
+            });
+            let content = 'No hub pair';
+            if (pair) {
+                const h1 = pair.hub1 || pair['Primary Location (Hub 1)'] || '';
+                const h2 = pair.hub2 || pair['Secondary Location (Hub 2)'] || '';
+                content = `Hub 1: ${h1}<br>Hub 2: ${h2}`;
+            }
+            this.tooltip.style('opacity', 1).html(`<div class="tooltip-title">${stateName}</div><div class="tooltip-content">${content}</div>`);
+            return;
+        }
+        
         const stateData = this.getStateDataForFeature(d);
         if (!stateData) {
             this.debugLog('[MapVisualizer] Mouse over state without data');
+            this.tooltip.style('opacity', 0);
             return;
         }
         
         this.debugLog(`[MapVisualizer] Mouse over state: ${stateData.state_name} (${stateData.state_iso})`);
-        
-        d3.select(event.currentTarget)
-            .style('opacity', 0.8);
-        
-        this.tooltip
-            .style('opacity', 1)
-            .html(this.generateTooltipContent(stateData));
+        this.tooltip.style('opacity', 1).html(this.generateTooltipContent(stateData));
     }
     
     handleMouseMove(event, d) {
@@ -677,19 +785,42 @@ class MapVisualizer {
         }
     }
     
-    applyMapMode(mode) {
+    async applyMapMode(mode) {
         this.mapMode = mode;
         const metricGroup = document.getElementById('metric-control-group');
+        const dcTiersGroup = document.getElementById('dc-tiers-control-group');
         if (metricGroup) metricGroup.style.display = mode === 'subscribers' ? '' : 'none';
+        if (dcTiersGroup) dcTiersGroup.style.display = mode === 'dc-tiers' ? '' : 'none';
         
+        if (mode === 'dc-tiers') {
+            window.__dataCenterTiersVisible = {
+                tier1: document.getElementById('tier1-toggle')?.checked ?? true,
+                tier2: document.getElementById('tier2-toggle')?.checked ?? true,
+                tier3: document.getElementById('tier3-toggle')?.checked ?? true
+            };
+            if (typeof loadDataCenterTiers === 'function') {
+                await loadDataCenterTiers();
+            }
+        }
+        
+        const isDcMode = ['data-centers', 'dc-tiers', 'hub-pairs'].includes(mode);
+        const strokeW = isDcMode ? this.DC_MODE_STROKE_WIDTH : this.STATE_STROKE_WIDTH;
+        const strokeC = isDcMode ? this.DC_MODE_STROKE_COLOR : this.STATE_STROKE_COLOR;
         this.g.selectAll('.state')
             .transition().duration(500)
-            .attr('fill', d => this.getStateFill(d));
+            .attr('fill', d => this.getStateFill(d))
+            .attr('stroke', strokeC)
+            .attr('stroke-width', strokeW);
         
         if (mode === 'hub-pairs') {
+            this.clearStateCentroidDots();
             this.renderHubPairsDots();
+        } else if (mode === 'data-centers' || mode === 'dc-tiers') {
+            this.clearHubPairsDots();
+            this.renderStateCentroidDots();
         } else {
             this.clearHubPairsDots();
+            this.clearStateCentroidDots();
         }
         
         this.renderStateLabels();
@@ -732,6 +863,26 @@ class MapVisualizer {
                 this.applyMapMode(e.target.value);
             });
         }
+        
+        // DC Tiers toggles
+        ['tier1-toggle', 'tier2-toggle', 'tier3-toggle'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('change', () => {
+                    if (this.mapMode === 'dc-tiers') {
+                        window.__dataCenterTiersVisible = {
+                            tier1: document.getElementById('tier1-toggle')?.checked ?? true,
+                            tier2: document.getElementById('tier2-toggle')?.checked ?? true,
+                            tier3: document.getElementById('tier3-toggle')?.checked ?? true
+                        };
+                        this.g.selectAll('.state')
+                            .transition().duration(300)
+                            .attr('fill', d => this.getStateFill(d));
+                        this.renderStateCentroidDots();
+                    }
+                });
+            }
+        });
         
         // Metric selector
         const metricSelect = document.getElementById('metric-select');

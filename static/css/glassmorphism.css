@@ -115,6 +115,27 @@ body {
     opacity: 0.9;
 }
 
+.tier-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+}
+
+.tier-toggles label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.tier-toggles input[type="checkbox"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+}
+
 select, button {
     background: rgba(255, 255, 255, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.3);

@@ -52,6 +52,15 @@ async def get_city_coordinates() -> Dict[str, Any]:
         return {}
 
 
+@router.get("/data-center-tiers")
+async def get_data_center_tiers() -> Dict[str, Any]:
+    """Data center tiers (Tier 1 Super Core, Tier 2 Regional, Tier 3 Edge) by state."""
+    try:
+        return _load_json("data_center_tiers.json")
+    except HTTPException:
+        return {"tier1": {"label": "Tier 1 - Super Core", "states": []}, "tier2": {"label": "Tier 2 - Regional", "states": []}, "tier3": {"label": "Tier 3 - Edge", "states": []}}
+
+
 @router.get("/datasets")
 async def list_datasets() -> Dict[str, Any]:
     """List available datasets for table input / visualization."""
