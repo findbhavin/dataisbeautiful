@@ -5,17 +5,37 @@
  * - Horizontal bars for long labels (metros, states)
  * - Tooltips, animations, rounded corners
  * - Colorblind-friendly palettes where applicable
+ * - Support for both US and India operators
  */
 
 const ChartColors = {
+    // US Operators
     verizon: '#dc2626',
     tmobile: '#db2777',
     att: '#0284c7',
     others: '#64748b',
+    // India Operators
+    jio: '#0066cc',
+    airtel: '#dc2626',
+    vi: '#db2777',
+    bsnl: '#16a34a',
     neutral: ['#93c5fd', '#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8'],
     // Lighter sequential for density (light theme)
     sequential: ['#e0f2fe', '#7dd3fc', '#38bdf8', '#0ea5e9', '#0284c7', '#0369a1']
 };
+
+// Get operator color based on operator name
+function getOperatorColor(operatorName) {
+    const name = (operatorName || '').toLowerCase();
+    if (name.includes('jio')) return ChartColors.jio;
+    if (name.includes('airtel')) return ChartColors.airtel;
+    if (name.includes('vi') || name.includes('vodafone') || name.includes('idea')) return ChartColors.vi;
+    if (name.includes('bsnl') || name.includes('mtnl')) return ChartColors.bsnl;
+    if (name.includes('verizon')) return ChartColors.verizon;
+    if (name.includes('t-mobile') || name.includes('tmobile')) return ChartColors.tmobile;
+    if (name.includes('at&t') || name.includes('att')) return ChartColors.att;
+    return ChartColors.others;
+}
 
 // Shared chart tooltip
 function chartTooltip() {
@@ -70,23 +90,28 @@ async function renderMarketSharePie(containerId, data) {
         .append('g').attr('transform', `translate(${width/2},${height/2})`);
 
     const color = d3.scaleOrdinal()
-        .domain(data.market_share.map(d => d.carrier))
-        .range([ChartColors.verizon, ChartColors.tmobile, ChartColors.att, ChartColors.others]);
+        .domain(data.market_share.map(d => d.carrier || d.operator))
+        .range(data.market_share.map(d => getOperatorColor(d.carrier || d.operator)));
 
-    const pie = d3.pie().value(d => d.subscriber_share_pct).sort(null);
+    const pie = d3.pie().value(d => d.subscriber_share_pct || d.share_pct).sort(null);
     const arc = d3.arc().innerRadius(innerRadius).outerRadius(radius).cornerRadius(4);
     const arcLabel = d3.arc().innerRadius(radius * 0.75).outerRadius(radius * 0.75);
 
     const arcs = svg.selectAll('arc').data(pie(data.market_share)).join('g');
     arcs.append('path')
         .attr('d', arc)
-        .attr('fill', d => color(d.data.carrier))
+        .attr('fill', d => color(d.data.carrier || d.data.operator))
         .attr('stroke', 'rgba(255,255,255,0.4)')
         .attr('stroke-width', 1.5)
         .style('cursor', 'pointer')
         .on('mouseover', function(event, d) {
             d3.select(this).attr('opacity', 0.9).attr('stroke-width', 2);
-            showTooltip(event, `<strong>${d.data.carrier}</strong><br>Subscriber share: ${d.data.subscriber_share_pct}%<br>Revenue share: ${d.data.revenue_share_pct}%<br><em>${d.data.insight}</em>`);
+            const operatorName = d.data.carrier || d.data.operator;
+            const sharePct = d.data.subscriber_share_pct || d.data.share_pct;
+            const revenuePct = d.data.revenue_share_pct || 0;
+            const insight = d.data.insight || '';
+            const tooltipHtml = `<strong>${operatorName}</strong><br>Subscriber share: ${sharePct}%${revenuePct ? `<br>Revenue share: ${revenuePct}%` : ''}${insight ? `<br><em>${insight}</em>` : ''}`;
+            showTooltip(event, tooltipHtml);
         })
         .on('mouseout', function() {
             d3.select(this).attr('opacity', 1).attr('stroke-width', 1.5);
@@ -102,11 +127,11 @@ async function renderMarketSharePie(containerId, data) {
     arcs.filter(d => (d.endAngle - d.startAngle) > 0.15).append('text')
         .attr('transform', d => `translate(${arcLabel.centroid(d)})`)
         .attr('text-anchor', 'middle').attr('fill', labelFill).attr('font-size', 13).attr('font-weight', 700)
-        .text(d => `${d.data.subscriber_share_pct}%`)
+        .text(d => `${d.data.subscriber_share_pct || d.data.share_pct}%`)
         .style('opacity', 0).transition().delay(400).style('opacity', 1);
 
     // Center label: total subscribers (data-first: prominent values)
-    const totalSubs = data.market_share.reduce((s, d) => s + d.subscriber_share_pct, 0);
+    const totalSubs = data.market_share.reduce((s, d) => s + (d.subscriber_share_pct || d.share_pct || 0), 0);
     svg.append('text').attr('text-anchor', 'middle').attr('dy', '-0.3em')
         .attr('fill', labelFill).attr('font-size', 22).attr('font-weight', 700)
         .text('~333M');
