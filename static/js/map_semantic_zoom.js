@@ -44,10 +44,8 @@ class MapVisualizer {
         this.STATE_STROKE_WIDTH = 1;  // Balanced stroke width (CSS fallback is 0.5px)
         this.STATE_FILL_OPACITY = 0.9;  // Slightly higher opacity for better color saturation
         
-        // Color scheme for choropleth (8 colors provide adequate granularity for data distribution)
-        // Removed lightest color (#c6dbef) as it was nearly invisible against the white glass background
-        // New lightest color (#9ecae1) is 12% darker and provides sufficient contrast
-        this.colorScheme = ['#9ecae1', '#6baed6', '#4292c6', '#2171b5', '#08519c', '#08306b', '#041f47', '#021324'];
+        // ColorBrewer YlGnBu sequential (colorblind-friendly); skip lightest for glass contrast
+        this.colorScheme = ['#c7e9b4', '#7fcdbb', '#41b6c4', '#2c7fb8', '#253494', '#081d58'];
         this.debugLog('[MapVisualizer] Color scheme initialized with', this.colorScheme.length, 'colors:', this.colorScheme);
         
         // FIPS to ISO-2 state code mapping
