@@ -28,6 +28,10 @@ body.theme-light .stat-label {
     color: #475569;
 }
 
+body.theme-light .stat-subtitle {
+    color: #64748b;
+}
+
 body.theme-light .info-banner {
     background: rgba(255, 255, 255, 0.95);
     color: #334155;
