@@ -13,8 +13,9 @@
  */
 
 class MapVisualizer {
-    constructor(containerId) {
+    constructor(containerId, country = 'us') {
         this.containerId = containerId;
+        this.country = country || 'us';
         this.data = null;
         this.currentMetric = 'total_subscribers';
         this.mapMode = 'subscribers';  // 'subscribers' | 'data-centers' | 'dc-tiers' | 'hub-pairs'
@@ -115,7 +116,8 @@ class MapVisualizer {
     
     async loadData() {
         try {
-            const response = await fetch('/api/mobile/data');
+            const url = this.country === 'india' ? '/api/mobile/india/data' : '/api/mobile/data';
+            const response = await fetch(url);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -145,12 +147,19 @@ class MapVisualizer {
         // Create container group for zoom
         this.g = this.svg.append('g');
         
-        // Setup projection for US map
-        this.projection = d3.geoAlbersUsa()
-            .translate([this.width / 2, this.height / 2])
-            .scale(1200);
-        
-        this.debugLog('[MapVisualizer] Projection configured: AlbersUsa, scale=1200');
+        // Setup projection: US uses AlbersUsa, India uses Mercator centered on India
+        if (this.country === 'india') {
+            this.projection = d3.geoMercator()
+                .center([78, 22])
+                .translate([this.width / 2, this.height / 2])
+                .scale(700);
+            this.debugLog('[MapVisualizer] Projection configured: Mercator (India), scale=700');
+        } else {
+            this.projection = d3.geoAlbersUsa()
+                .translate([this.width / 2, this.height / 2])
+                .scale(1200);
+            this.debugLog('[MapVisualizer] Projection configured: AlbersUsa, scale=1200');
+        }
         
         this.path = d3.geoPath().projection(this.projection);
         
@@ -189,56 +198,59 @@ class MapVisualizer {
     }
     
     /**
-     * Load topology data with local-first approach and CDN fallback
+     * Load topology/geography. US: TopoJSON, India: GeoJSON.
      */
     async loadTopology() {
+        if (this.country === 'india') {
+            try {
+                const geojson = await d3.json('/api/geo/india/geojson/states');
+                if (!geojson || !geojson.features || geojson.features.length === 0) {
+                    throw new Error('India GeoJSON has no features');
+                }
+                console.log('✓ Loaded India GeoJSON:', geojson.features.length, 'states');
+                return { type: 'geojson', data: geojson };
+            } catch (e) {
+                console.error('India GeoJSON failed:', e);
+                throw new Error('Unable to load India map. Run: python scripts/download_india_geojson.py');
+            }
+        }
         const localPath = '/api/geo/topojson/states';
-        // Use states-only TopoJSON (object "states"); d3js.org/us-10m.v1 has "counties" and may not have "states"
         const cdnPath = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json';
-        
         try {
-            console.log('Attempting to load topology from local server...');
             const us = await d3.json(localPath);
-            console.log('✓ Loaded topology from local server');
-            return us;
+            console.log('✓ Loaded US topology from local server');
+            return { type: 'topojson', data: us };
         } catch (localError) {
             console.warn('Local topology failed:', localError.message);
-            console.log('Attempting to load topology from CDN fallback...');
-            
             try {
                 const us = await d3.json(cdnPath);
-                console.log('✓ Loaded topology from CDN fallback');
-                return us;
+                console.log('✓ Loaded US topology from CDN');
+                return { type: 'topojson', data: us };
             } catch (cdnError) {
-                console.error('✗ Both local and CDN topology failed');
-                throw new Error('Unable to load map data from any source. Local: ' + localError.message + ', CDN: ' + cdnError.message);
+                throw new Error('Unable to load map data. Local: ' + localError.message + ', CDN: ' + cdnError.message);
             }
         }
     }
 
     async renderMap() {
         try {
-            // Load US states TopoJSON using local-first approach
-            // This file uses numeric FIPS codes as feature.id
-            const us = await this.loadTopology();
-            
-            // Validate TopoJSON structure
-            if (!us || !us.objects || !us.objects.states) {
-                console.error('Invalid TopoJSON structure:', us);
-                console.warn('Expected us.objects.states to exist.');
-                this.showError('Map data is unavailable. Please refresh the page.');
-                return;
+            const topo = await this.loadTopology();
+            let states;
+            if (topo.type === 'geojson') {
+                states = topo.data;
+            } else {
+                const us = topo.data;
+                if (!us || !us.objects || !us.objects.states) {
+                    console.error('Invalid TopoJSON structure:', us);
+                    this.showError('Map data is unavailable. Please refresh the page.');
+                    return;
+                }
+                if (!us.arcs || us.arcs.length === 0) {
+                    this.showError('Map topology data is incomplete. Run ./scripts/download_dependencies.sh');
+                    return;
+                }
+                states = topojson.feature(us, us.objects.states);
             }
-            
-            // NEW: Validate arcs array exists and is not empty
-            if (!us.arcs || us.arcs.length === 0) {
-                console.error('TopoJSON has no arc data - placeholder file detected');
-                this.showError('Map topology data is incomplete. Please run ./scripts/download_dependencies.sh to download actual map data.');
-                return;
-            }
-            
-            // Convert TopoJSON to GeoJSON
-            const states = topojson.feature(us, us.objects.states);
             
             this.debugLog(`Loaded ${states.features.length} state features from TopoJSON`);
             
@@ -350,49 +362,32 @@ class MapVisualizer {
     }
     
     getStateDataForFeature(feature) {
-        /**
-         * Match a TopoJSON feature to our subscriber data.
-         * 
-         * TopoJSON features use numeric FIPS codes (e.g., "06" for California)
-         * Our data uses ISO-2 codes (e.g., "CA" for California)
-         * 
-         * Strategy:
-         * 1. Try to get FIPS code from feature.id (numeric)
-         * 2. Convert FIPS to ISO-2 using lookup table
-         * 3. Find matching state in our data by ISO-2 code
-         * 4. Fallback to name matching if FIPS lookup fails
-         */
-        
-        // Get FIPS code from feature
+        if (this.country === 'india') {
+            const name = feature.properties?.NAME_1 || feature.properties?.name;
+            if (!name) return null;
+            return this.data.by_state.find(d =>
+                d.state_name && d.state_name.toLowerCase() === String(name).toLowerCase()
+            ) || null;
+        }
         let fipsCode = null;
         if (feature.id !== undefined && feature.id !== null) {
-            // Convert to zero-padded string
             fipsCode = String(feature.id).padStart(2, '0');
         }
-        
-        // Try FIPS to ISO-2 lookup
         if (fipsCode && this.fipsToIso[fipsCode]) {
             const isoCode = this.fipsToIso[fipsCode];
-            const stateData = this.data.by_state.find(d => 
+            const stateData = this.data.by_state.find(d =>
                 d.state_iso === isoCode && d.state_iso !== this.OTHERS_AVG_STATE_ISO
             );
-            if (stateData) {
-                return stateData;
-            }
+            if (stateData) return stateData;
         }
-        
-        // Fallback: Try matching by feature.properties.name if available
         if (feature.properties && feature.properties.name) {
             const featureName = feature.properties.name;
             const stateData = this.data.by_state.find(d => {
                 if (!d.state_name || d.state_iso === 'OTH') return false;
                 return d.state_name.toLowerCase() === featureName.toLowerCase();
             });
-            if (stateData) {
-                return stateData;
-            }
+            if (stateData) return stateData;
         }
-        
         return null;
     }
     
@@ -497,6 +492,9 @@ class MapVisualizer {
             .style('paint-order', 'stroke')
             .style('pointer-events', 'none')
             .text(d => {
+                if (this.country === 'india') {
+                    return d.properties?.NAME_1 || d.properties?.name || '';
+                }
                 const fips = d.id != null ? String(d.id).padStart(2, '0') : null;
                 const iso = fips && this.fipsToIso[fips] ? this.fipsToIso[fips] : null;
                 return iso ? (this.isoToStateName[iso] || iso) : '';
@@ -609,9 +607,11 @@ class MapVisualizer {
         this.statesFeatures.forEach(d => {
             if (this.mapMode === 'data-centers') {
                 const stateValues = window.__dataCentersStateValues || {};
-                const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
-                const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
-                const value = iso ? (stateValues[iso] || '').trim() : '';
+                const key = this.country === 'india' ? (d.properties?.NAME_1 || d.properties?.name || '') : (() => {
+                    const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
+                    return fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
+                })();
+                const value = key ? (stateValues[key] || '').trim() : '';
                 if (!value || value === 'None') return;
                 const centroid = d3.geoCentroid(d);
                 const projected = this.projection(centroid);
@@ -652,29 +652,39 @@ class MapVisualizer {
     getActiveTiersForState(d) {
         const tiers = window.__dataCenterTiers || { tier1: new Set(), tier2: new Set(), tier3: new Set() };
         const visible = window.__dataCenterTiersVisible || { tier1: true, tier2: true, tier3: true };
-        const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
-        const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
-        if (!iso) return [];
+        let key;
+        if (this.country === 'india') {
+            key = d.properties?.NAME_1 || d.properties?.name || '';
+        } else {
+            const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
+            key = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
+        }
+        if (!key) return [];
         const active = [];
-        if (visible.tier1 && tiers.tier1?.has(iso)) active.push('tier1');
-        if (visible.tier2 && tiers.tier2?.has(iso)) active.push('tier2');
-        if (visible.tier3 && tiers.tier3?.has(iso)) active.push('tier3');
+        if (visible.tier1 && tiers.tier1?.has(key)) active.push('tier1');
+        if (visible.tier2 && tiers.tier2?.has(key)) active.push('tier2');
+        if (visible.tier3 && tiers.tier3?.has(key)) active.push('tier3');
         return active;
     }
     
     stateHasDcData(d) {
-        const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
-        const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
-        if (!iso) return false;
+        let key;
+        if (this.country === 'india') {
+            key = d.properties?.NAME_1 || d.properties?.name || '';
+        } else {
+            const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
+            key = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
+        }
+        if (!key) return false;
         if (this.mapMode === 'data-centers') {
             const stateValues = window.__dataCentersStateValues || {};
-            const value = (stateValues[iso] || '').trim();
+            const value = (stateValues[key] || '').trim();
             return !!value && value !== 'None';
         }
         if (this.mapMode === 'dc-tiers') {
             const tiers = window.__dataCenterTiers || { tier1: new Set(), tier2: new Set(), tier3: new Set() };
             const visible = window.__dataCenterTiersVisible || { tier1: true, tier2: true, tier3: true };
-            return (visible.tier1 && tiers.tier1?.has(iso)) || (visible.tier2 && tiers.tier2?.has(iso)) || (visible.tier3 && tiers.tier3?.has(iso));
+            return (visible.tier1 && tiers.tier1?.has(key)) || (visible.tier2 && tiers.tier2?.has(key)) || (visible.tier3 && tiers.tier3?.has(key));
         }
         return false;
     }
@@ -832,42 +842,39 @@ class MapVisualizer {
     }
     
     formatValue(value) {
-        // Values are in millions (M), format appropriately
-        if (value >= 1000) {
-            // Convert to billions
-            return `${(value / 1000).toFixed(2)}B`;
-        } else if (value >= 1) {
-            // Show as millions
-            return `${value.toFixed(1)}M`;
-        } else if (value > 0) {
-            // Show as thousands for values < 1M
-            return `${(value * 1000).toFixed(0)}K`;
+        if (this.country === 'india') {
+            if (value >= 1) return `${value.toFixed(1)} Cr`;
+            if (value > 0) return `${(value * 10).toFixed(1)} L`;
+            return '0';
         }
+        if (value >= 1000) return `${(value / 1000).toFixed(2)}B`;
+        if (value >= 1) return `${value.toFixed(1)}M`;
+        if (value > 0) return `${(value * 1000).toFixed(0)}K`;
         return '0';
     }
     
     updateStats() {
-        // Mobile subscribers total: 333M (actual data). US population: ~350M.
-        const MOBILE_SUBSCRIBERS_TOTAL = 333;
-        const US_POPULATION_APPROX = 350;
         const totalElement = d3.select('#stat-total');
-        if (!totalElement.empty()) {
-            totalElement.text(`${MOBILE_SUBSCRIBERS_TOTAL}M`);
-        }
         const subtitleEl = document.getElementById('stat-total-subtitle');
-        if (subtitleEl) subtitleEl.textContent = `of ~${US_POPULATION_APPROX}M total US population`;
-        const othersCarriers = this.data.by_state.reduce((s, d) => s + d.others_total, 0);
-        const othersCarriersPost = this.data.by_state.reduce((s, d) => s + d.others_postpaid, 0);
-        const othersCarriersPre = this.data.by_state.reduce((s, d) => s + d.others_prepaid, 0);
-        const diffNote = document.getElementById('map-total-note');
-        if (diffNote) {
-            diffNote.innerHTML = `<strong>${MOBILE_SUBSCRIBERS_TOTAL}M</strong> total mobile subscribers (of ~${US_POPULATION_APPROX}M US population). <em>Others (carriers)</em>: ${othersCarriers.toFixed(1)}M (${othersCarriersPre.toFixed(1)} Pre + ${othersCarriersPost.toFixed(1)} Post) — Cable/Dish, etc.`;
-        }
-        // States shown on map (32 individual, excluding Others aggregate)
         const statesElement = d3.select('#stat-states');
-        if (!statesElement.empty()) {
-            const stateCount = this.data.by_state.filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO).length;
-            statesElement.text(stateCount);
+        const diffNote = document.getElementById('map-total-note');
+        if (this.country === 'india') {
+            const total = this.data.total_subscribers_display || (this.data.total_subscribers / 1e7).toFixed(2) + ' Cr';
+            const stateCount = (this.data.by_state || []).length;
+            if (!totalElement.empty()) totalElement.text(total);
+            if (subtitleEl) subtitleEl.textContent = 'TRAI / GSMA estimates (Sep 2025)';
+            if (!statesElement.empty()) statesElement.text(stateCount);
+            if (diffNote) diffNote.innerHTML = `<strong>${total}</strong> total wireless subscribers. Currency: INR.</strong>`;
+        } else {
+            const MOBILE_SUBSCRIBERS_TOTAL = 333;
+            const US_POPULATION_APPROX = 350;
+            if (!totalElement.empty()) totalElement.text(`${MOBILE_SUBSCRIBERS_TOTAL}M`);
+            if (subtitleEl) subtitleEl.textContent = `of ~${US_POPULATION_APPROX}M total US population`;
+            const othersCarriers = this.data.by_state.reduce((s, d) => s + (d.others_total || 0), 0);
+            const othersCarriersPost = this.data.by_state.reduce((s, d) => s + (d.others_postpaid || 0), 0);
+            const othersCarriersPre = this.data.by_state.reduce((s, d) => s + (d.others_prepaid || 0), 0);
+            if (diffNote) diffNote.innerHTML = `<strong>${MOBILE_SUBSCRIBERS_TOTAL}M</strong> total mobile subscribers (of ~${US_POPULATION_APPROX}M US population). <em>Others (carriers)</em>: ${othersCarriers.toFixed(1)}M (${othersCarriersPre.toFixed(1)} Pre + ${othersCarriersPost.toFixed(1)} Post) — Cable/Dish, etc.`;
+            if (!statesElement.empty()) statesElement.text(this.data.by_state.filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO).length);
         }
     }
     
@@ -1071,8 +1078,46 @@ class MapVisualizer {
         doCheck();
     };
 
+    const updateMetricSelectForCountry = (country) => {
+        const sel = document.getElementById('metric-select');
+        if (!sel) return;
+        const indiaOpts = [
+            ['total_subscribers', 'Total (Cr)'],
+            ['jio_total', 'Jio (Cr)'],
+            ['airtel_total', 'Airtel (Cr)'],
+            ['vi_total', 'Vi (Cr)'],
+            ['bsnl_total', 'BSNL (Cr)'],
+            ['others_total', 'Others (Cr)'],
+            ['urban_subscribers', 'Urban (Cr)'],
+            ['rural_subscribers', 'Rural (Cr)']
+        ];
+        const usOpts = [
+            ['total_subscribers', 'Total Mobile (T)'],
+            ['total_prepaid', 'Total (Pre)'],
+            ['total_postpaid', 'Total (Post)'],
+            ['verizon_total', 'Verizon (T)'],
+            ['verizon_prepaid', 'Verizon (Pre)'],
+            ['verizon_postpaid', 'Verizon (Post)'],
+            ['tmobile_total', 'T-Mobile (T)'],
+            ['tmobile_prepaid', 'T-Mobile (Pre)'],
+            ['tmobile_postpaid', 'T-Mobile (Post)'],
+            ['att_total', 'AT&T (T)'],
+            ['att_prepaid', 'AT&T (Pre)'],
+            ['att_postpaid', 'AT&T (Post)'],
+            ['others_total', 'Others (carriers) (T)'],
+            ['others_prepaid', 'Others (carriers) (Pre)'],
+            ['others_postpaid', 'Others (carriers) (Post)']
+        ];
+        const opts = country === 'india' ? indiaOpts : usOpts;
+        sel.innerHTML = opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+    };
+
     const initializeMap = async () => {
-        const visualizer = new MapVisualizer('map-svg-container');
+        const countrySel = document.getElementById('country-select');
+        const country = countrySel ? countrySel.value : 'us';
+        window.__country = country;
+        updateMetricSelectForCountry(country);
+        const visualizer = new MapVisualizer('map-svg-container', country);
         window.__mapVisualizer = visualizer;
         
         try {
@@ -1109,11 +1154,26 @@ class MapVisualizer {
         }
     };
 
-    // Start checking - handle both cases robustly
+    const setupCountrySelector = () => {
+        const sel = document.getElementById('country-select');
+        if (!sel) return;
+        sel.addEventListener('change', () => {
+            window.__country = sel.value;
+            if (typeof window.clearMapCaches === 'function') window.clearMapCaches();
+            const dt = document.getElementById('data-table-container');
+            if (dt) dt.dataset.loaded = 'false';
+            d3.select('#map-svg-container').html('<div class="loading"><div class="spinner"></div>Loading visualization...</div>');
+            initializeMap();
+        });
+    };
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', checkLibraries, { once: true });
+        document.addEventListener('DOMContentLoaded', () => {
+            setupCountrySelector();
+            checkLibraries();
+        }, { once: true });
     } else {
-        // DOM is already ready, start immediately
+        setupCountrySelector();
         checkLibraries();
     }
 })();

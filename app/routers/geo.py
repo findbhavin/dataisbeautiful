@@ -76,6 +76,33 @@ async def get_counties_topojson() -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Error loading TopoJSON: {str(e)}")
 
 
+@router.get("/india/geojson/states")
+async def get_india_states_geojson() -> Dict[str, Any]:
+    """
+    Get India states GeoJSON for map visualization.
+    
+    Returns:
+        GeoJSON FeatureCollection with Indian states (NAME_1 property)
+    """
+    try:
+        geojson_path = Path(__file__).parent.parent.parent / "data" / "india" / "indian_states.geojson"
+        with open(geojson_path, 'r') as f:
+            data = json.load(f)
+        if not data.get('features'):
+            raise ValueError("India GeoJSON has no features")
+        return data
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "India states GeoJSON not found",
+                "solution": "Run: python scripts/download_india_geojson.py"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error loading India GeoJSON: {str(e)}")
+
+
 @router.get("/geojson/states")
 async def get_states_geojson() -> Dict[str, Any]:
     """

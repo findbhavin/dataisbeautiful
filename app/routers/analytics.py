@@ -52,6 +52,33 @@ async def get_city_coordinates() -> Dict[str, Any]:
         return {}
 
 
+@router.get("/india/city-coordinates")
+async def get_india_city_coordinates() -> Dict[str, Any]:
+    """India city name to [lng, lat] for Hub Pair map."""
+    try:
+        return _load_json("india/india_city_coordinates.json")
+    except HTTPException:
+        return {}
+
+
+@router.get("/india/hub-pairs")
+async def get_india_hub_pairs() -> Dict[str, Any]:
+    """India hub pairs by type: dual, single, superCore."""
+    try:
+        return _load_json("india/india_hub_pairs.json")
+    except HTTPException:
+        return {"dual": {"label": "", "pairs": []}, "single": {"label": "", "pairs": []}, "superCore": {"label": "", "pairs": []}}
+
+
+@router.get("/india/data-center-tiers")
+async def get_india_data_center_tiers() -> Dict[str, Any]:
+    """India data center tiers (Tier 1 Super Core, Tier 2 Regional, Tier 3 Edge)."""
+    try:
+        return _load_json("india/india_data_center_tiers.json")
+    except HTTPException:
+        return {"tier1": {"label": "", "states": []}, "tier2": {"label": "", "states": []}, "tier3": {"label": "", "states": []}}
+
+
 @router.get("/hub-pairs")
 async def get_hub_pairs() -> Dict[str, Any]:
     """Hub pairs by type: dual (Regional & Edge), single (Single Edge), superCore (Super Core)."""

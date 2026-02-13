@@ -1,0 +1,54 @@
+{
+  "tier1": {
+    "label": "Tier 1 - Super Core (Mumbai, Delhi NCR, Hyderabad, Bengaluru)",
+    "states": [
+      {"state": "Maharashtra", "type": "Super Core", "cities": ["Mumbai", "Pune"]},
+      {"state": "Delhi", "type": "Super Core", "cities": ["Delhi", "Noida", "Gurgaon"]},
+      {"state": "Telangana", "type": "Super Core", "cities": ["Hyderabad"]},
+      {"state": "Karnataka", "type": "Super Core", "cities": ["Bengaluru"]},
+      {"state": "Tamil Nadu", "type": "Super Core", "cities": ["Chennai"]}
+    ]
+  },
+  "tier2": {
+    "label": "Tier 2 - Regional Core (Dual UPF)",
+    "states": [
+      {"state": "Maharashtra", "type": "Regional Core", "cities": ["Mumbai", "Pune", "Nagpur"]},
+      {"state": "Delhi", "type": "Regional Core", "cities": ["Delhi", "Noida"]},
+      {"state": "Telangana", "type": "Regional Core", "cities": ["Hyderabad", "Secunderabad"]},
+      {"state": "Karnataka", "type": "Regional Core", "cities": ["Bengaluru", "Mysore"]},
+      {"state": "Tamil Nadu", "type": "Regional Core", "cities": ["Chennai", "Coimbatore"]},
+      {"state": "Gujarat", "type": "Regional Core", "cities": ["Ahmedabad", "Gandhinagar"]},
+      {"state": "West Bengal", "type": "Regional Core", "cities": ["Kolkata", "Howrah"]},
+      {"state": "Uttar Pradesh", "type": "Regional Core", "cities": ["Noida", "Lucknow"]},
+      {"state": "Rajasthan", "type": "Regional Core", "cities": ["Jaipur", "Udaipur"]},
+      {"state": "Kerala", "type": "Regional Core", "cities": ["Kochi", "Thiruvananthapuram"]},
+      {"state": "Andhra Pradesh", "type": "Regional Core", "cities": ["Visakhapatnam", "Vijayawada"]},
+      {"state": "Madhya Pradesh", "type": "Regional Core", "cities": ["Bhopal", "Indore"]},
+      {"state": "Punjab", "type": "Regional Core", "cities": ["Chandigarh", "Mohali"]}
+    ]
+  },
+  "tier3": {
+    "label": "Tier 3 - Edge Data Centers",
+    "states": [
+      {"state": "Assam", "type": "Edge Data Center", "cities": ["Guwahati"]},
+      {"state": "Bihar", "type": "Edge Data Center", "cities": ["Patna", "Gaya"]},
+      {"state": "Jharkhand", "type": "Edge Data Center", "cities": ["Ranchi", "Jamshedpur"]},
+      {"state": "Odisha", "type": "Edge Data Center", "cities": ["Bhubaneswar", "Cuttack"]},
+      {"state": "Chhattisgarh", "type": "Edge Data Center", "cities": ["Raipur", "Bhilai"]},
+      {"state": "Goa", "type": "Edge Data Center", "cities": ["Panaji"]},
+      {"state": "Himachal Pradesh", "type": "Edge Data Center", "cities": ["Shimla"]},
+      {"state": "Uttarakhand", "type": "Edge Data Center", "cities": ["Dehradun"]},
+      {"state": "Jammu and Kashmir", "type": "Edge Data Center", "cities": ["Srinagar", "Jammu"]},
+      {"state": "Ladakh", "type": "Edge Data Center", "cities": ["Leh"]},
+      {"state": "Manipur", "type": "Edge Data Center", "cities": ["Imphal"]},
+      {"state": "Meghalaya", "type": "Edge Data Center", "cities": ["Shillong"]},
+      {"state": "Mizoram", "type": "Edge Data Center", "cities": ["Aizawl"]},
+      {"state": "Nagaland", "type": "Edge Data Center", "cities": ["Kohima"]},
+      {"state": "Tripura", "type": "Edge Data Center", "cities": ["Agartala"]},
+      {"state": "Arunachal Pradesh", "type": "Edge Data Center", "cities": ["Itanagar"]},
+      {"state": "Sikkim", "type": "Edge Data Center", "cities": ["Gangtok"]},
+      {"state": "Puducherry", "type": "Edge Data Center", "cities": ["Puducherry"]},
+      {"state": "Andaman and Nicobar", "type": "Edge Data Center", "cities": ["Port Blair"]}
+    ]
+  }
+}

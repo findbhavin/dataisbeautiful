@@ -41,6 +41,18 @@ For production-quality visualizations with accurate state shapes, download the f
 
 **Tip**: For automated deployments, add `RUN ./scripts/download_dependencies.sh` to your Dockerfile to download libraries during the build process.
 
+#### India Map (indiamap branch)
+
+The `indiamap` branch adds India map support with TRAI/GSMA-style mobile data in INR (Cr):
+
+```bash
+# Download India state GeoJSON (required for India map)
+python scripts/download_india_geojson.py
+# or on Windows: py scripts/download_india_geojson.py
+```
+
+Then select **India** from the Map dropdown in the header to view the India visualization.
+
 #### Local Development
 
 ```bash

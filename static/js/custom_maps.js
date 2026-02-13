@@ -1,6 +1,18 @@
 /**
  * Custom maps: Data Centers (state highlighting) and Hub Pairs (city dots)
  */
+const INDIA_STATE_NAME_TO_KEY = {
+    'Maharashtra': 'Maharashtra', 'Uttar Pradesh': 'Uttar Pradesh', 'Andhra Pradesh': 'Andhra Pradesh',
+    'Telangana': 'Telangana', 'Bihar': 'Bihar', 'Jharkhand': 'Jharkhand', 'Madhya Pradesh': 'Madhya Pradesh',
+    'Chhattisgarh': 'Chhattisgarh', 'Gujarat': 'Gujarat', 'Karnataka': 'Karnataka', 'Rajasthan': 'Rajasthan',
+    'West Bengal': 'West Bengal', 'Tamil Nadu': 'Tamil Nadu', 'Delhi': 'Delhi', 'Kerala': 'Kerala',
+    'Odisha': 'Odisha', 'Punjab': 'Punjab', 'Haryana': 'Haryana', 'Assam': 'Assam',
+    'Jammu and Kashmir': 'Jammu and Kashmir', 'Uttarakhand': 'Uttarakhand', 'Himachal Pradesh': 'Himachal Pradesh',
+    'Goa': 'Goa', 'Manipur': 'Manipur', 'Meghalaya': 'Meghalaya', 'Mizoram': 'Mizoram', 'Nagaland': 'Nagaland',
+    'Tripura': 'Tripura', 'Arunachal Pradesh': 'Arunachal Pradesh', 'Sikkim': 'Sikkim', 'Chandigarh': 'Chandigarh',
+    'Andaman and Nicobar': 'Andaman and Nicobar', 'Ladakh': 'Ladakh', 'Puducherry': 'Puducherry'
+};
+
 const STATE_NAME_TO_ISO = {
     'California': 'CA', 'Texas': 'TX', 'Florida': 'FL', 'New York': 'NY', 'Pennsylvania': 'PA',
     'Illinois': 'IL', 'Ohio': 'OH', 'Georgia': 'GA', 'N. Carolina': 'NC', 'North Carolina': 'NC',
@@ -19,15 +31,24 @@ const STATE_NAME_TO_ISO = {
 let cityCoords = null;
 let dataCenterTiersCache = null;
 let hubPairsDefaultCache = null;
+window.clearMapCaches = function() {
+    cityCoords = null;
+    dataCenterTiersCache = null;
+    hubPairsDefaultCache = null;
+    window.__hubPairsCacheCountry = null;
+    window.__dcTiersCacheCountry = null;
+};
 
 const HUB_PAIRS_COLORS = { dual: '#0284c7', single: '#16a34a', superCore: '#dc2626' };
 
 async function loadHubPairsDefault() {
-    if (hubPairsDefaultCache) return hubPairsDefaultCache;
+    const country = window.__country || 'us';
+    const cacheKey = country === 'india' ? 'india' : 'us';
+    if (hubPairsDefaultCache && window.__hubPairsCacheCountry === cacheKey) return hubPairsDefaultCache;
     try {
-        const r = await fetch('/api/analytics/hub-pairs');
+        const r = await fetch(country === 'india' ? '/api/analytics/india/hub-pairs' : '/api/analytics/hub-pairs');
         const data = await r.json();
-        const coords = await loadCityCoords();
+        const coords = await (country === 'india' ? loadIndiaCityCoords() : loadCityCoords());
         function resolveCoords(name) {
             if (!name) return null;
             let c = coords[name] || coords[name.replace(/\s*\([^)]*\)\s*$/, '').trim()];
@@ -61,6 +82,7 @@ async function loadHubPairsDefault() {
         });
         hubPairsDefaultCache = result;
         window.__hubPairsByType = result;
+        window.__hubPairsCacheCountry = cacheKey;
     } catch (e) {
         hubPairsDefaultCache = { dual: [], single: [], superCore: [] };
         window.__hubPairsByType = hubPairsDefaultCache;
@@ -68,16 +90,29 @@ async function loadHubPairsDefault() {
     return hubPairsDefaultCache;
 }
 
-async function loadDataCenterTiers() {
-    if (dataCenterTiersCache) return dataCenterTiersCache;
+async function loadIndiaCityCoords() {
     try {
-        const r = await fetch('/api/analytics/data-center-tiers');
+        const r = await fetch('/api/analytics/india/city-coordinates');
+        return await r.json();
+    } catch (e) {
+        return {};
+    }
+}
+
+async function loadDataCenterTiers() {
+    const country = window.__country || 'us';
+    const cacheKey = country === 'india' ? 'india' : 'us';
+    if (dataCenterTiersCache && window.__dcTiersCacheCountry === cacheKey) return dataCenterTiersCache;
+    try {
+        const r = await fetch(country === 'india' ? '/api/analytics/india/data-center-tiers' : '/api/analytics/data-center-tiers');
         const data = await r.json();
-        const tier1 = new Set((data.tier1?.states || []).map(s => stateNameToIso(s.state)).filter(Boolean));
-        const tier2 = new Set((data.tier2?.states || []).map(s => stateNameToIso(s.state)).filter(Boolean));
-        const tier3 = new Set((data.tier3?.states || []).map(s => stateNameToIso(s.state)).filter(Boolean));
+        const toKey = country === 'india' ? (s) => (s.state && INDIA_STATE_NAME_TO_KEY[s.state]) || s.state : (s) => stateNameToIso(s.state);
+        const tier1 = new Set((data.tier1?.states || []).map(toKey).filter(Boolean));
+        const tier2 = new Set((data.tier2?.states || []).map(toKey).filter(Boolean));
+        const tier3 = new Set((data.tier3?.states || []).map(toKey).filter(Boolean));
         dataCenterTiersCache = { tier1, tier2, tier3 };
         window.__dataCenterTiers = dataCenterTiersCache;
+        window.__dcTiersCacheCountry = cacheKey;
     } catch (e) {
         dataCenterTiersCache = { tier1: new Set(), tier2: new Set(), tier3: new Set() };
         window.__dataCenterTiers = dataCenterTiersCache;
