@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 
-from app.routers import mobile, geo
+from app.routers import mobile, geo, analytics
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -39,6 +39,7 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 # Include routers
 app.include_router(mobile.router)
 app.include_router(geo.router)
+app.include_router(analytics.router)
 
 
 @app.get("/", response_class=HTMLResponse)

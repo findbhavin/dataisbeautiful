@@ -538,6 +538,8 @@ class MapVisualizer {
     generateTooltipContent(stateData) {
         const value = stateData[this.currentMetric];
         const metricLabel = this.getMetricLabel(this.currentMetric);
+        const isOthersMetric = this.currentMetric.startsWith('others_');
+        const othersNote = isOthersMetric ? '<div class="tooltip-note">Others = Cable/MVNOs, not comparable to VZ/TMO/ATT</div>' : '';
         
         return `
             <div class="tooltip-title">${stateData.state_name}</div>
@@ -545,6 +547,7 @@ class MapVisualizer {
                 <strong>${metricLabel}:</strong> 
                 <span class="tooltip-value">${this.formatValue(value)}</span>
             </div>
+            ${othersNote}
         `;
     }
     

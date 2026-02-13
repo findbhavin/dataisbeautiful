@@ -1,0 +1,14 @@
+{
+  "top10_metros": [
+    { "rank": 1, "metro": "New York", "total": 18.7, "verizon": 7.4, "tmobile": 6.3, "att": 4.3, "others": 0.7 },
+    { "rank": 2, "metro": "Los Angeles", "total": 12.3, "verizon": 4.0, "tmobile": 4.8, "att": 3.1, "others": 0.4 },
+    { "rank": 3, "metro": "Chicago", "total": 8.7, "verizon": 3.2, "tmobile": 2.9, "att": 2.3, "others": 0.3 },
+    { "rank": 4, "metro": "Dallas-FTW", "total": 7.4, "verizon": 2.1, "tmobile": 2.3, "att": 2.8, "others": 0.2 },
+    { "rank": 5, "metro": "Houston", "total": 6.8, "verizon": 1.9, "tmobile": 2.2, "att": 2.5, "others": 0.2 },
+    { "rank": 6, "metro": "Washington DC", "total": 5.9, "verizon": 2.5, "tmobile": 1.8, "att": 1.5, "others": 0.1 },
+    { "rank": 7, "metro": "Philadelphia", "total": 5.7, "verizon": 2.3, "tmobile": 1.9, "att": 1.4, "others": 0.1 },
+    { "rank": 8, "metro": "Miami", "total": 5.6, "verizon": 1.7, "tmobile": 2.0, "att": 1.7, "others": 0.2 },
+    { "rank": 9, "metro": "Atlanta", "total": 5.5, "verizon": 1.5, "tmobile": 1.9, "att": 1.9, "others": 0.2 },
+    { "rank": 10, "metro": "Phoenix", "total": 4.8, "verizon": 1.5, "tmobile": 2.0, "att": 1.2, "others": 0.1 }
+  ]
+}

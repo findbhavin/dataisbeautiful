@@ -72,6 +72,21 @@ body {
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
 }
 
+/* Info Banner - Others disclaimer */
+.info-banner {
+    margin: 12px auto;
+    max-width: 1400px;
+    padding: 12px 20px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text-light);
+    border-left: 4px solid #f59e0b;
+}
+
+.info-banner strong {
+    color: #fbbf24;
+}
+
 /* Controls Section */
 .controls-section {
     margin: 20px auto;
@@ -214,6 +229,13 @@ button:active {
     color: #60a5fa;
 }
 
+.tooltip-note {
+    font-size: 0.75rem;
+    opacity: 0.85;
+    margin-top: 6px;
+    color: #fbbf24;
+}
+
 /* Legend */
 .legend {
     margin: 20px auto;
@@ -350,3 +372,82 @@ button:active {
 .fade-in {
     animation: fadeIn 0.5s ease-out;
 }
+
+/* Dashboard Tabs */
+.dashboard-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px auto;
+    max-width: 1400px;
+    padding: 12px 20px;
+}
+
+.tab-btn {
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    background: rgba(255,255,255,0.25);
+}
+
+.tab-btn.active {
+    background: rgba(255,255,255,0.35);
+    font-weight: 600;
+}
+
+.tab-content {
+    display: none;
+    margin: 20px auto;
+    max-width: 1400px;
+    padding: 0 20px;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.chart-panel h3 {
+    margin-bottom: 16px;
+    font-size: 1.2rem;
+}
+
+.chart-legend {
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+
+.table-input-area, #table-input-area {
+    width: 100%;
+    max-width: 800px;
+    min-height: 150px;
+    padding: 12px;
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 0.9rem;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: var(--text-light);
+    margin: 12px 0;
+}
+
+.help-text {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    margin-bottom: 8px;
+}
+
+#table-parse-btn {
+    margin-bottom: 16px;
+}
+
+.table-output-viz .error, .table-output-viz .success {
+    margin-bottom: 12px;
+}
+
+.table-output-viz .error { color: #f87171; }
+.table-output-viz .success { color: #4ade80; }

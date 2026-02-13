@@ -1,0 +1,20 @@
+{
+  "spectrum_depth_nationwide": [
+    { "band": "Low-Band", "tmobile_mhz": 71, "att_mhz": 74, "verizon_mhz": 46 },
+    { "band": "Lower Mid", "tmobile_mhz": 110, "att_mhz": 120, "verizon_mhz": 40 },
+    { "band": "Upper Mid", "tmobile_mhz": 213, "att_mhz": 181, "verizon_mhz": 193 },
+    { "band": "Total Sub-6", "tmobile_mhz": 394, "att_mhz": 375, "verizon_mhz": 279 }
+  ],
+  "spectrum_by_market": [
+    { "market": "New York, NY", "tmobile_mhz": 415, "att_mhz": 390, "verizon_mhz": 310, "leader": "T-Mobile" },
+    { "market": "Los Angeles, CA", "tmobile_mhz": 425, "att_mhz": 385, "verizon_mhz": 300, "leader": "T-Mobile" },
+    { "market": "Chicago, IL", "tmobile_mhz": 390, "att_mhz": 370, "verizon_mhz": 290, "leader": "T-Mobile" },
+    { "market": "San Francisco, CA", "tmobile_mhz": 410, "att_mhz": 380, "verizon_mhz": 305, "leader": "T-Mobile" },
+    { "market": "Dallas, TX", "tmobile_mhz": 385, "att_mhz": 410, "verizon_mhz": 295, "leader": "AT&T" },
+    { "market": "Houston, TX", "tmobile_mhz": 380, "att_mhz": 400, "verizon_mhz": 290, "leader": "AT&T" },
+    { "market": "Philadelphia, PA", "tmobile_mhz": 400, "att_mhz": 375, "verizon_mhz": 320, "leader": "T-Mobile" },
+    { "market": "Washington, DC", "tmobile_mhz": 395, "att_mhz": 380, "verizon_mhz": 315, "leader": "T-Mobile" },
+    { "market": "Boston, MA", "tmobile_mhz": 405, "att_mhz": 385, "verizon_mhz": 310, "leader": "T-Mobile" },
+    { "market": "Atlanta, GA", "tmobile_mhz": 390, "att_mhz": 405, "verizon_mhz": 290, "leader": "AT&T" }
+  ]
+}
