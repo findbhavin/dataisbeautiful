@@ -76,6 +76,74 @@ async def get_counties_topojson() -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Error loading TopoJSON: {str(e)}")
 
 
+@router.get("/topojson/india-states")
+async def get_india_states_topojson() -> Dict[str, Any]:
+    """
+    Get India states TopoJSON data with validation.
+    
+    Returns:
+        TopoJSON object with India states
+        
+    Raises:
+        HTTPException: If file not found, invalid, or is a placeholder
+    """
+    try:
+        topojson_path = Path(__file__).parent.parent.parent / "data" / "topojson" / "india_states.topo.json"
+        
+        with open(topojson_path, 'r') as f:
+            data = json.load(f)
+        
+        # Validate it's not a placeholder (check for arcs)
+        if not data.get('arcs') or len(data.get('arcs', [])) == 0:
+            raise ValueError("Placeholder TopoJSON detected - no arc data")
+        
+        return data
+        
+    except FileNotFoundError:
+        # Return helpful error message
+        raise HTTPException(
+            status_code=404, 
+            detail={
+                "error": "India states TopoJSON file not found",
+                "solution": "Ensure data/topojson/india_states.topo.json exists"
+            }
+        )
+    except ValueError as e:
+        # Placeholder file detected
+        raise HTTPException(
+            status_code=404, 
+            detail={
+                "error": "India states TopoJSON file is invalid or placeholder",
+                "message": str(e),
+                "solution": "Ensure data/topojson/india_states.topo.json has valid geographic data"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error loading India TopoJSON: {str(e)}")
+
+
+@router.get("/india/city-coordinates")
+async def get_india_city_coordinates() -> Dict[str, Any]:
+    """
+    Get India city coordinates for all cities, districts, and talukas.
+    
+    Returns:
+        Dictionary mapping city names to [longitude, latitude] coordinates
+    """
+    try:
+        coords_path = Path(__file__).parent.parent.parent / "data" / "india" / "city_coordinates.json"
+        with open(coords_path, 'r') as f:
+            data = json.load(f)
+        return data
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail="India city coordinates file not found"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error loading India city coordinates: {str(e)}")
+
+
 @router.get("/india/geojson/states")
 async def get_india_states_geojson() -> Dict[str, Any]:
     """
