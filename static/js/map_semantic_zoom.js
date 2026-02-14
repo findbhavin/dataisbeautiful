@@ -48,7 +48,8 @@ class MapVisualizer {
         // CSS also uses dark gray (#333333) to ensure visibility regardless of style precedence
         this.STATE_STROKE_COLOR = '#1f2937';  // Dark gray borders for visibility
         this.STATE_STROKE_WIDTH = 1;  // Balanced stroke width (CSS fallback is 0.5px)
-        this.DC_MODE_STROKE_WIDTH = 2;  // Stronger borders for Data Centers / Hub Pairs
+        this.DC_MODE_STROKE_WIDTH = 1.1;  // Stronger borders for Data Centers / Hub Pairs
+        this.INDIA_DC_TIERS_STROKE_WIDTH = 0.2;  // Extra-thin for India DC tiers map
         this.DC_MODE_STROKE_COLOR = '#0f172a';  // Darker stroke for DC modes
         this.STATE_FILL_OPACITY = 0.9;  // Slightly higher opacity for better color saturation
 
@@ -313,9 +314,9 @@ class MapVisualizer {
             
             // Draw states with proper data matching
             this.debugLog(`[MapVisualizer] Drawing states with styling: stroke=${this.STATE_STROKE_COLOR}, stroke-width=${this.STATE_STROKE_WIDTH}, fill-opacity=${this.STATE_FILL_OPACITY}`);
-            const isDcMode = ['data-centers', 'dc-tiers', 'hub-pairs'].includes(this.mapMode);
-            const strokeW = isDcMode ? this.DC_MODE_STROKE_WIDTH : this.STATE_STROKE_WIDTH;
-            const strokeC = isDcMode ? this.DC_MODE_STROKE_COLOR : this.STATE_STROKE_COLOR;
+            const strokeStyle = this.getModeStrokeStyle(this.mapMode);
+            const strokeW = strokeStyle.width;
+            const strokeC = strokeStyle.color;
             const statePaths = this.g.selectAll('.state')
                 .data(states.features)
                 .join('path')
@@ -988,6 +989,18 @@ class MapVisualizer {
             if (othersLabel) othersLabel.textContent = 'States (32 shown + 19 in Others)';
         }
     }
+
+    getModeStrokeStyle(mode = this.mapMode) {
+        const isIndia = this.country === 'india' || this.country === 'india-option-b';
+        if (mode === 'dc-tiers' && isIndia) {
+            return { width: this.INDIA_DC_TIERS_STROKE_WIDTH, color: this.DC_MODE_STROKE_COLOR };
+        }
+        const isDcMode = ['data-centers', 'dc-tiers', 'hub-pairs'].includes(mode);
+        return {
+            width: isDcMode ? this.DC_MODE_STROKE_WIDTH : this.STATE_STROKE_WIDTH,
+            color: isDcMode ? this.DC_MODE_STROKE_COLOR : this.STATE_STROKE_COLOR
+        };
+    }
     
     async applyMapMode(mode) {
         const metricGroup = document.getElementById('metric-control-group');
@@ -1032,9 +1045,9 @@ class MapVisualizer {
             }
         }
         
-        const isDcMode = ['data-centers', 'dc-tiers', 'hub-pairs'].includes(mode);
-        const strokeW = isDcMode ? this.DC_MODE_STROKE_WIDTH : this.STATE_STROKE_WIDTH;
-        const strokeC = isDcMode ? this.DC_MODE_STROKE_COLOR : this.STATE_STROKE_COLOR;
+        const strokeStyle = this.getModeStrokeStyle(mode);
+        const strokeW = strokeStyle.width;
+        const strokeC = strokeStyle.color;
         this.g.selectAll('.state')
             .transition().duration(500)
             .attr('fill', d => this.getStateFill(d))
