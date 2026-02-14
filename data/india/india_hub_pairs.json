@@ -1,0 +1,57 @@
+{
+  "dual": {
+    "label": "Regional & Edge (High Density) - Dual Locations",
+    "pairs": [
+      {"state": "Maharashtra", "hub1": "Mumbai", "hub2": "Pune"},
+      {"state": "Delhi", "hub1": "Delhi", "hub2": "Noida"},
+      {"state": "Karnataka", "hub1": "Bengaluru", "hub2": "Mysore"},
+      {"state": "Tamil Nadu", "hub1": "Chennai", "hub2": "Coimbatore"},
+      {"state": "Telangana", "hub1": "Hyderabad", "hub2": "Secunderabad"},
+      {"state": "Gujarat", "hub1": "Ahmedabad", "hub2": "Surat"},
+      {"state": "West Bengal", "hub1": "Kolkata", "hub2": "Howrah"},
+      {"state": "Uttar Pradesh", "hub1": "Noida", "hub2": "Lucknow"},
+      {"state": "Rajasthan", "hub1": "Jaipur", "hub2": "Udaipur"},
+      {"state": "Kerala", "hub1": "Kochi", "hub2": "Thiruvananthapuram"},
+      {"state": "Andhra Pradesh", "hub1": "Visakhapatnam", "hub2": "Vijayawada"},
+      {"state": "Madhya Pradesh", "hub1": "Bhopal", "hub2": "Indore"},
+      {"state": "Punjab", "hub1": "Chandigarh", "hub2": "Mohali"},
+      {"state": "Bihar", "hub1": "Patna", "hub2": "Gaya"},
+      {"state": "Jharkhand", "hub1": "Ranchi", "hub2": "Jamshedpur"},
+      {"state": "Odisha", "hub1": "Bhubaneswar", "hub2": "Cuttack"}
+    ]
+  },
+  "single": {
+    "label": "Single Edge (Standard Density) - Single Locations",
+    "pairs": [
+      {"state": "Assam", "hub1": "Guwahati", "hub2": ""},
+      {"state": "Chhattisgarh", "hub1": "Raipur", "hub2": ""},
+      {"state": "Goa", "hub1": "Panaji", "hub2": ""},
+      {"state": "Himachal Pradesh", "hub1": "Shimla", "hub2": ""},
+      {"state": "Uttarakhand", "hub1": "Dehradun", "hub2": ""},
+      {"state": "Jammu and Kashmir", "hub1": "Srinagar", "hub2": ""},
+      {"state": "Ladakh", "hub1": "Leh", "hub2": ""},
+      {"state": "Manipur", "hub1": "Imphal", "hub2": ""},
+      {"state": "Meghalaya", "hub1": "Shillong", "hub2": ""},
+      {"state": "Mizoram", "hub1": "Aizawl", "hub2": ""},
+      {"state": "Nagaland", "hub1": "Kohima", "hub2": ""},
+      {"state": "Tripura", "hub1": "Agartala", "hub2": ""},
+      {"state": "Arunachal Pradesh", "hub1": "Itanagar", "hub2": ""},
+      {"state": "Sikkim", "hub1": "Gangtok", "hub2": ""},
+      {"state": "Puducherry", "hub1": "Puducherry", "hub2": ""},
+      {"state": "Andaman and Nicobar", "hub1": "Port Blair", "hub2": ""}
+    ]
+  },
+  "superCore": {
+    "label": "Super Core (National Hubs)",
+    "pairs": [
+      {"state": "Maharashtra", "hub1": "Mumbai", "hub2": "Pune"},
+      {"state": "Delhi", "hub1": "Delhi", "hub2": "Noida"},
+      {"state": "Karnataka", "hub1": "Bengaluru", "hub2": ""},
+      {"state": "Telangana", "hub1": "Hyderabad", "hub2": ""},
+      {"state": "Tamil Nadu", "hub1": "Chennai", "hub2": ""},
+      {"state": "Maharashtra-Delhi", "hub1": "Mumbai", "hub2": "Delhi"},
+      {"state": "Bengaluru-Hyderabad", "hub1": "Bengaluru", "hub2": "Hyderabad"},
+      {"state": "Chennai-Bengaluru", "hub1": "Chennai", "hub2": "Bengaluru"}
+    ]
+  }
+}

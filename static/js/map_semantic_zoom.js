@@ -13,8 +13,9 @@
  */
 
 class MapVisualizer {
-    constructor(containerId) {
+    constructor(containerId, country = 'us') {
         this.containerId = containerId;
+        this.country = country || 'us';
         this.data = null;
         this.currentMetric = 'total_subscribers';
         this.mapMode = 'subscribers';  // 'subscribers' | 'data-centers' | 'dc-tiers' | 'hub-pairs'
@@ -115,7 +116,8 @@ class MapVisualizer {
     
     async loadData() {
         try {
-            const response = await fetch('/api/mobile/data');
+            const url = (this.country === 'india' || this.country === 'india-option-b') ? '/api/mobile/india/data' : '/api/mobile/data';
+            const response = await fetch(url);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -145,12 +147,20 @@ class MapVisualizer {
         // Create container group for zoom
         this.g = this.svg.append('g');
         
-        // Setup projection for US map
-        this.projection = d3.geoAlbersUsa()
-            .translate([this.width / 2, this.height / 2])
-            .scale(1200);
-        
-        this.debugLog('[MapVisualizer] Projection configured: AlbersUsa, scale=1200');
+        // Setup projection: US uses AlbersUsa, India uses Mercator
+        // Bounds [68,6]-[97,38] include POK (west) and Aksai Chin (east) for full India-claimed territory
+        if (this.country === 'india' || this.country === 'india-option-b') {
+            this.projection = d3.geoMercator()
+                .center([77.5, 22])
+                .translate([this.width / 2, this.height / 2])
+                .scale(600);
+            this.debugLog('[MapVisualizer] Projection configured: Mercator (India), bounds [68,6]-[97,38], scale=600');
+        } else {
+            this.projection = d3.geoAlbersUsa()
+                .translate([this.width / 2, this.height / 2])
+                .scale(1200);
+            this.debugLog('[MapVisualizer] Projection configured: AlbersUsa, scale=1200');
+        }
         
         this.path = d3.geoPath().projection(this.projection);
         
@@ -189,56 +199,92 @@ class MapVisualizer {
     }
     
     /**
-     * Load topology data with local-first approach and CDN fallback
+     * Load topology/geography. US uses TopoJSON. India uses GeoJSON (TopoJSON has invalid arc indices).
      */
     async loadTopology() {
+        if (this.country === 'india-option-b') {
+            try {
+                const geoRes = await fetch('/api/geo/india/option-b/geojson');
+                if (geoRes.ok) {
+                    const geojson = await geoRes.json();
+                    if (geojson?.features?.length) {
+                        console.log('✓ Loaded India Option B (udit-001):', geojson.features.length, 'states');
+                        return { type: 'geojson', data: geojson };
+                    }
+                }
+                throw new Error('India Option B map unavailable');
+            } catch (e) {
+                console.error('India Option B map failed:', e);
+                throw e;
+            }
+        }
+        if (this.country === 'india') {
+            try {
+                const geoRes = await fetch('/api/geo/india/geojson/states');
+                if (geoRes.ok) {
+                    const geojson = await geoRes.json();
+                    if (geojson?.features?.length) {
+                        console.log('✓ Loaded India GeoJSON (legacy):', geojson.features.length, 'states');
+                        return { type: 'geojson', data: geojson };
+                    }
+                }
+                const indiaTopoJson = await d3.json('/api/geo/topojson/india-states');
+                if (!indiaTopoJson?.objects?.states?.geometries?.length) throw new Error('India TopoJSON invalid');
+                try {
+                    const states = topojson.feature(indiaTopoJson, indiaTopoJson.objects.states);
+                    if (states?.features?.length) {
+                        console.log('✓ Loaded India TopoJSON:', states.features.length, 'states');
+                        return { type: 'geojson', data: states };
+                    }
+                } catch (te) {
+                    console.warn('India TopoJSON conversion failed, GeoJSON not available:', te.message);
+                }
+                throw new Error('Unable to load India map. Run: py scripts/download_india_geojson.py');
+            } catch (e) {
+                console.error('India map failed:', e);
+                throw e;
+            }
+        }
         const localPath = '/api/geo/topojson/states';
-        // Use states-only TopoJSON (object "states"); d3js.org/us-10m.v1 has "counties" and may not have "states"
         const cdnPath = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json';
-        
         try {
-            console.log('Attempting to load topology from local server...');
             const us = await d3.json(localPath);
-            console.log('✓ Loaded topology from local server');
-            return us;
+            console.log('✓ Loaded US topology from local server');
+            return { type: 'topojson', data: us };
         } catch (localError) {
             console.warn('Local topology failed:', localError.message);
-            console.log('Attempting to load topology from CDN fallback...');
-            
             try {
                 const us = await d3.json(cdnPath);
-                console.log('✓ Loaded topology from CDN fallback');
-                return us;
+                console.log('✓ Loaded US topology from CDN');
+                return { type: 'topojson', data: us };
             } catch (cdnError) {
-                console.error('✗ Both local and CDN topology failed');
-                throw new Error('Unable to load map data from any source. Local: ' + localError.message + ', CDN: ' + cdnError.message);
+                throw new Error('Unable to load map data. Local: ' + localError.message + ', CDN: ' + cdnError.message);
             }
         }
     }
 
     async renderMap() {
         try {
-            // Load US states TopoJSON using local-first approach
-            // This file uses numeric FIPS codes as feature.id
-            const us = await this.loadTopology();
-            
-            // Validate TopoJSON structure
-            if (!us || !us.objects || !us.objects.states) {
-                console.error('Invalid TopoJSON structure:', us);
-                console.warn('Expected us.objects.states to exist.');
-                this.showError('Map data is unavailable. Please refresh the page.');
-                return;
+            const topo = await this.loadTopology();
+            let states;
+            if (topo.type === 'geojson') {
+                states = topo.data;
+                if (!states?.features?.length) {
+                    this.showError('Map data is empty. Please refresh the page.');
+                    return;
+                }
+            } else {
+                const topoData = topo.data;
+                if (!topoData?.objects?.states) {
+                    this.showError('Map data is unavailable. Please refresh the page.');
+                    return;
+                }
+                if (!topoData.arcs?.length) {
+                    this.showError('Map topology data is incomplete.');
+                    return;
+                }
+                states = topojson.feature(topoData, topoData.objects.states);
             }
-            
-            // NEW: Validate arcs array exists and is not empty
-            if (!us.arcs || us.arcs.length === 0) {
-                console.error('TopoJSON has no arc data - placeholder file detected');
-                this.showError('Map topology data is incomplete. Please run ./scripts/download_dependencies.sh to download actual map data.');
-                return;
-            }
-            
-            // Convert TopoJSON to GeoJSON
-            const states = topojson.feature(us, us.objects.states);
             
             this.debugLog(`Loaded ${states.features.length} state features from TopoJSON`);
             
@@ -350,49 +396,43 @@ class MapVisualizer {
     }
     
     getStateDataForFeature(feature) {
-        /**
-         * Match a TopoJSON feature to our subscriber data.
-         * 
-         * TopoJSON features use numeric FIPS codes (e.g., "06" for California)
-         * Our data uses ISO-2 codes (e.g., "CA" for California)
-         * 
-         * Strategy:
-         * 1. Try to get FIPS code from feature.id (numeric)
-         * 2. Convert FIPS to ISO-2 using lookup table
-         * 3. Find matching state in our data by ISO-2 code
-         * 4. Fallback to name matching if FIPS lookup fails
-         */
-        
-        // Get FIPS code from feature
+        if (this.country === 'india' || this.country === 'india-option-b') {
+            // Try matching by state_iso (from TopoJSON id)
+            const stateIso = feature.id || feature.properties?.state_iso;
+            if (stateIso) {
+                const matchByIso = this.data.by_state.find(d =>
+                    d.state_iso && d.state_iso.toUpperCase() === String(stateIso).toUpperCase()
+                );
+                if (matchByIso) return matchByIso;
+            }
+            
+            // Try matching by name (normalize " & " to " and "; also support st_nm from udit-001)
+            const name = (feature.properties?.name || feature.properties?.NAME_1 || feature.properties?.st_nm || '').replace(/\s*&\s*/g, ' and ').trim();
+            if (!name) return null;
+            const norm = (s) => (s || '').replace(/\s*&\s*/g, ' and ').toLowerCase().trim();
+            return this.data.by_state.find(d =>
+                d.state_name && norm(d.state_name) === norm(name)
+            ) || null;
+        }
         let fipsCode = null;
         if (feature.id !== undefined && feature.id !== null) {
-            // Convert to zero-padded string
             fipsCode = String(feature.id).padStart(2, '0');
         }
-        
-        // Try FIPS to ISO-2 lookup
         if (fipsCode && this.fipsToIso[fipsCode]) {
             const isoCode = this.fipsToIso[fipsCode];
-            const stateData = this.data.by_state.find(d => 
+            const stateData = this.data.by_state.find(d =>
                 d.state_iso === isoCode && d.state_iso !== this.OTHERS_AVG_STATE_ISO
             );
-            if (stateData) {
-                return stateData;
-            }
+            if (stateData) return stateData;
         }
-        
-        // Fallback: Try matching by feature.properties.name if available
         if (feature.properties && feature.properties.name) {
             const featureName = feature.properties.name;
             const stateData = this.data.by_state.find(d => {
                 if (!d.state_name || d.state_iso === 'OTH') return false;
                 return d.state_name.toLowerCase() === featureName.toLowerCase();
             });
-            if (stateData) {
-                return stateData;
-            }
+            if (stateData) return stateData;
         }
-        
         return null;
     }
     
@@ -411,7 +451,10 @@ class MapVisualizer {
         }
         const stateData = this.getStateDataForFeature(d);
         if (!stateData) return '#e2e8f0';
-        return this.colorScale(stateData[this.currentMetric]);
+        const val = stateData[this.currentMetric];
+        const isRevenue = this.currentMetric === 'revenue_inr_cr' || this.currentMetric === 'annual_revenue_b';
+        if (isRevenue && (val == null || val === 0 || isNaN(val))) return '#e2e8f0';
+        return this.colorScale(val);
     }
     
     renderStateLabels() {
@@ -438,11 +481,17 @@ class MapVisualizer {
             .join('text')
             .attr('class', 'state-label')
             .attr('x', d => {
-                const coords = this.projection([d.longitude, d.latitude]);
+                const lng = d?.longitude;
+                const lat = d?.latitude;
+                if (lng == null || lat == null) return 0;
+                const coords = this.projection([lng, lat]);
                 return coords ? coords[0] : 0;
             })
             .attr('y', d => {
-                const coords = this.projection([d.longitude, d.latitude]);
+                const lng = d?.longitude;
+                const lat = d?.latitude;
+                if (lng == null || lat == null) return 0;
+                const coords = this.projection([lng, lat]);
                 return coords ? coords[1] : 0;
             })
             .attr('text-anchor', 'middle')
@@ -478,14 +527,20 @@ class MapVisualizer {
             .join('text')
             .attr('class', 'state-label')
             .attr('x', d => {
-                const c = d3.geoCentroid(d);
-                const p = this.projection(c);
-                return p ? p[0] : 0;
+                try {
+                    if (!d?.geometry) return 0;
+                    const c = d3.geoCentroid(d);
+                    const p = this.projection(c);
+                    return p ? p[0] : 0;
+                } catch (e) { return 0; }
             })
             .attr('y', d => {
-                const c = d3.geoCentroid(d);
-                const p = this.projection(c);
-                return p ? p[1] : 0;
+                try {
+                    if (!d?.geometry) return 0;
+                    const c = d3.geoCentroid(d);
+                    const p = this.projection(c);
+                    return p ? p[1] : 0;
+                } catch (e) { return 0; }
             })
             .attr('text-anchor', 'middle')
             .attr('dominant-baseline', 'middle')
@@ -497,6 +552,9 @@ class MapVisualizer {
             .style('paint-order', 'stroke')
             .style('pointer-events', 'none')
             .text(d => {
+                if (this.country === 'india' || this.country === 'india-option-b') {
+                    return d.properties?.NAME_1 || d.properties?.name || d.properties?.st_nm || '';
+                }
                 const fips = d.id != null ? String(d.id).padStart(2, '0') : null;
                 const iso = fips && this.fipsToIso[fips] ? this.fipsToIso[fips] : null;
                 return iso ? (this.isoToStateName[iso] || iso) : '';
@@ -517,9 +575,11 @@ class MapVisualizer {
     }
     
     updateColorScale() {
+        const isRev = this.currentMetric === 'revenue_inr_cr' || this.currentMetric === 'annual_revenue_b';
         const values = this.data.by_state
             .filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO)
-            .map(d => d[this.currentMetric]);
+            .map(d => d[this.currentMetric])
+            .filter(v => v != null && !isNaN(v) && (!isRev || v > 0));
         
         const extent = d3.extent(values);
         
@@ -527,9 +587,13 @@ class MapVisualizer {
         this.debugLog('[MapVisualizer] Value extent:', extent, 'min:', extent[0], 'max:', extent[1]);
         this.debugLog('[MapVisualizer] Number of data points:', values.length);
         
+        const isRevenue = this.currentMetric === 'revenue_inr_cr' || this.currentMetric === 'annual_revenue_b';
+        const revenueScheme = ['#b91c1c', '#f87171', '#fef08a', '#86efac', '#15803d'];
+        const scheme = isRevenue ? revenueScheme : this.colorScheme;
+        
         this.colorScale = d3.scaleQuantize()
             .domain(extent)
-            .range(this.colorScheme);
+            .range(scheme);
         
         this.debugLog('[MapVisualizer] Color scale domain:', this.colorScale.domain());
         this.debugLog('[MapVisualizer] Color scale range:', this.colorScale.range());
@@ -553,8 +617,8 @@ class MapVisualizer {
         }
         if (this.mapMode === 'dc-tiers') {
             legendContainer.append('div').style('background-color', '#084081').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Tier 1 - Super Core (circle)');
-            legendContainer.append('div').style('background-color', '#0868ac').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Tier 2 - Regional (square)');
-            legendContainer.append('div').style('background-color', '#43a2ca').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Tier 3 - Edge (triangle)');
+            legendContainer.append('div').style('background-color', '#0d9488').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Tier 2 - Regional (square)');
+            legendContainer.append('div').style('background-color', '#ea580c').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Tier 3 - Edge (triangle)');
             legendContainer.style('display', 'flex');
             if (!minLabel.empty()) minLabel.text('Tier 1');
             if (!maxLabel.empty()) maxLabel.text('Tier 3');
@@ -570,10 +634,12 @@ class MapVisualizer {
             return;
         }
         
+        const isRevenue = this.currentMetric === 'revenue_inr_cr' || this.currentMetric === 'annual_revenue_b';
+        const legendScheme = isRevenue ? ['#b91c1c', '#f87171', '#fef08a', '#86efac', '#15803d'] : this.colorScheme;
         const legendWidth = legendContainer.node().clientWidth;
-        const segmentWidth = legendWidth / this.colorScheme.length;
+        const segmentWidth = legendWidth / legendScheme.length;
         
-        this.colorScheme.forEach((color) => {
+        legendScheme.forEach((color) => {
             legendContainer.append('div')
                 .style('background-color', color)
                 .style('width', `${segmentWidth}px`)
@@ -581,9 +647,11 @@ class MapVisualizer {
                 .style('display', 'inline-block');
         });
         
+        const isRev = this.currentMetric === 'revenue_inr_cr' || this.currentMetric === 'annual_revenue_b';
         const values = this.data.by_state
             .filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO)
-            .map(d => d[this.currentMetric]);
+            .map(d => d[this.currentMetric])
+            .filter(v => v != null && !isNaN(v) && (!isRev || v > 0));
         const extent = d3.extent(values);
         if (!minLabel.empty() && !maxLabel.empty()) {
             minLabel.text(this.formatValue(extent[0]));
@@ -603,27 +671,34 @@ class MapVisualizer {
         this.clearStateCentroidDots();
         if (!this.statesFeatures) return;
         const layer = this.g.append('g').attr('class', 'state-centroid-dots');
-        const tierColors = { tier1: '#084081', tier2: '#0868ac', tier3: '#43a2ca' };
+        const tierColors = { tier1: '#084081', tier2: '#0d9488', tier3: '#ea580c' };
         const shapeSize = 6;
         const offsetStep = 10;
+        const fillOpacity = 0.6;
         this.statesFeatures.forEach(d => {
             if (this.mapMode === 'data-centers') {
                 const stateValues = window.__dataCentersStateValues || {};
-                const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
-                const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
-                const value = iso ? (stateValues[iso] || '').trim() : '';
+                const key = (this.country === 'india' || this.country === 'india-option-b') ? (d.properties?.NAME_1 || d.properties?.name || d.properties?.st_nm || '') : (() => {
+                    const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
+                    return fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
+                })();
+                const value = key ? (stateValues[key] || '').trim() : '';
                 if (!value || value === 'None') return;
-                const centroid = d3.geoCentroid(d);
+                let centroid;
+                try { centroid = d?.geometry ? d3.geoCentroid(d) : null; } catch (e) { return; }
+                if (!centroid) return;
                 const projected = this.projection(centroid);
                 if (!projected) return;
                 const color = /super\s*core/i.test(value) ? '#084081' : '#0868ac';
                 layer.append('circle').attr('cx', projected[0]).attr('cy', projected[1]).attr('r', shapeSize)
-                    .attr('fill', color).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
+                    .attr('fill', color).attr('fill-opacity', 0.6).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
                 return;
             }
             const activeTiers = this.getActiveTiersForState(d);
             if (activeTiers.length === 0) return;
-            const centroid = d3.geoCentroid(d);
+            let centroid;
+            try { centroid = d?.geometry ? d3.geoCentroid(d) : null; } catch (e) { return; }
+            if (!centroid) return;
             const projected = this.projection(centroid);
             if (!projected) return;
             const [cx, cy] = projected;
@@ -631,19 +706,19 @@ class MapVisualizer {
             const startX = cx - totalWidth / 2;
             activeTiers.forEach((tier, i) => {
                 const x = activeTiers.length === 1 ? cx : startX + i * offsetStep;
-                const color = tierColors[tier] || '#43a2ca';
+                const color = tierColors[tier] || '#ea580c';
                 if (tier === 'tier1') {
                     layer.append('circle').attr('cx', x).attr('cy', cy).attr('r', shapeSize)
-                        .attr('fill', color).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
+                        .attr('fill', color).attr('fill-opacity', fillOpacity).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
                 } else if (tier === 'tier2') {
                     const s = shapeSize * 1.2;
                     layer.append('rect').attr('x', x - s).attr('y', cy - s).attr('width', s * 2).attr('height', s * 2)
-                        .attr('fill', color).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
+                        .attr('fill', color).attr('fill-opacity', fillOpacity).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
                 } else {
                     const r = shapeSize * 1.3;
                     const path = `M ${x} ${cy - r} L ${x + r} ${cy + r} L ${x - r} ${cy + r} Z`;
                     layer.append('path').attr('d', path)
-                        .attr('fill', color).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
+                        .attr('fill', color).attr('fill-opacity', fillOpacity).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
                 }
             });
         });
@@ -652,29 +727,39 @@ class MapVisualizer {
     getActiveTiersForState(d) {
         const tiers = window.__dataCenterTiers || { tier1: new Set(), tier2: new Set(), tier3: new Set() };
         const visible = window.__dataCenterTiersVisible || { tier1: true, tier2: true, tier3: true };
-        const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
-        const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
-        if (!iso) return [];
+        let key;
+        if (this.country === 'india' || this.country === 'india-option-b') {
+            key = d.properties?.NAME_1 || d.properties?.name || d.properties?.st_nm || '';
+        } else {
+            const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
+            key = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
+        }
+        if (!key) return [];
         const active = [];
-        if (visible.tier1 && tiers.tier1?.has(iso)) active.push('tier1');
-        if (visible.tier2 && tiers.tier2?.has(iso)) active.push('tier2');
-        if (visible.tier3 && tiers.tier3?.has(iso)) active.push('tier3');
+        if (visible.tier1 && tiers.tier1?.has(key)) active.push('tier1');
+        if (visible.tier2 && tiers.tier2?.has(key)) active.push('tier2');
+        if (visible.tier3 && tiers.tier3?.has(key)) active.push('tier3');
         return active;
     }
     
     stateHasDcData(d) {
-        const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
-        const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
-        if (!iso) return false;
+        let key;
+        if (this.country === 'india' || this.country === 'india-option-b') {
+            key = d.properties?.NAME_1 || d.properties?.name || d.properties?.st_nm || '';
+        } else {
+            const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
+            key = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
+        }
+        if (!key) return false;
         if (this.mapMode === 'data-centers') {
             const stateValues = window.__dataCentersStateValues || {};
-            const value = (stateValues[iso] || '').trim();
+            const value = (stateValues[key] || '').trim();
             return !!value && value !== 'None';
         }
         if (this.mapMode === 'dc-tiers') {
             const tiers = window.__dataCenterTiers || { tier1: new Set(), tier2: new Set(), tier3: new Set() };
             const visible = window.__dataCenterTiersVisible || { tier1: true, tier2: true, tier3: true };
-            return (visible.tier1 && tiers.tier1?.has(iso)) || (visible.tier2 && tiers.tier2?.has(iso)) || (visible.tier3 && tiers.tier3?.has(iso));
+            return (visible.tier1 && tiers.tier1?.has(key)) || (visible.tier2 && tiers.tier2?.has(key)) || (visible.tier3 && tiers.tier3?.has(key));
         }
         return false;
     }
@@ -687,8 +772,13 @@ class MapVisualizer {
         const drawPair = (p, isCustom) => {
             const c1 = p.c1;
             const c2 = p.c2 || (isCustom ? null : null);
-            const p1 = this.projection(c1);
-            const p2 = c2 ? this.projection(c2) : null;
+            if (!c1 || !Array.isArray(c1)) return;
+            const toLngLat = (c) => Array.isArray(c) ? c : (c && (c.lng != null || c.lngitude != null) ? [c.lng ?? c.longitude, c.lat ?? c.latitude] : null);
+            const coord1 = toLngLat(c1);
+            const coord2 = c2 ? toLngLat(c2) : null;
+            if (!coord1) return;
+            const p1 = this.projection(coord1);
+            const p2 = coord2 ? this.projection(coord2) : null;
             const color = p.color || '#0284c7';
             if (p1 && p2) {
                 layer.append('line')
@@ -832,42 +922,56 @@ class MapVisualizer {
     }
     
     formatValue(value) {
-        // Values are in millions (M), format appropriately
-        if (value >= 1000) {
-            // Convert to billions
-            return `${(value / 1000).toFixed(2)}B`;
-        } else if (value >= 1) {
-            // Show as millions
-            return `${value.toFixed(1)}M`;
-        } else if (value > 0) {
-            // Show as thousands for values < 1M
-            return `${(value * 1000).toFixed(0)}K`;
+        if (this.currentMetric === 'revenue_inr_cr') {
+            if (value >= 1000) return `₹${(value / 1000).toFixed(1)}K Cr`;
+            if (value >= 1) return `₹${value.toFixed(0)} Cr`;
+            return value != null ? `₹${value}` : '0';
         }
+        if (this.currentMetric === 'annual_revenue_b') {
+            if (value >= 1) return `$${value.toFixed(1)}B`;
+            if (value > 0) return `$${(value * 1000).toFixed(0)}M`;
+            return value != null ? `$${value}` : '$0';
+        }
+        if (this.country === 'india' || this.country === 'india-option-b') {
+            if (value >= 1) return `${value.toFixed(1)} Cr`;
+            if (value > 0) return `${(value * 10).toFixed(1)} L`;
+            return '0';
+        }
+        if (value >= 1000) return `${(value / 1000).toFixed(2)}B`;
+        if (value >= 1) return `${value.toFixed(1)}M`;
+        if (value > 0) return `${(value * 1000).toFixed(0)}K`;
         return '0';
     }
     
     updateStats() {
-        // Mobile subscribers total: 333M (actual data). US population: ~350M.
-        const MOBILE_SUBSCRIBERS_TOTAL = 333;
-        const US_POPULATION_APPROX = 350;
         const totalElement = d3.select('#stat-total');
-        if (!totalElement.empty()) {
-            totalElement.text(`${MOBILE_SUBSCRIBERS_TOTAL}M`);
-        }
         const subtitleEl = document.getElementById('stat-total-subtitle');
-        if (subtitleEl) subtitleEl.textContent = `of ~${US_POPULATION_APPROX}M total US population`;
-        const othersCarriers = this.data.by_state.reduce((s, d) => s + d.others_total, 0);
-        const othersCarriersPost = this.data.by_state.reduce((s, d) => s + d.others_postpaid, 0);
-        const othersCarriersPre = this.data.by_state.reduce((s, d) => s + d.others_prepaid, 0);
-        const diffNote = document.getElementById('map-total-note');
-        if (diffNote) {
-            diffNote.innerHTML = `<strong>${MOBILE_SUBSCRIBERS_TOTAL}M</strong> total mobile subscribers (of ~${US_POPULATION_APPROX}M US population). <em>Others (carriers)</em>: ${othersCarriers.toFixed(1)}M (${othersCarriersPre.toFixed(1)} Pre + ${othersCarriersPost.toFixed(1)} Post) — Cable/Dish, etc.`;
-        }
-        // States shown on map (32 individual, excluding Others aggregate)
         const statesElement = d3.select('#stat-states');
-        if (!statesElement.empty()) {
-            const stateCount = this.data.by_state.filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO).length;
-            statesElement.text(stateCount);
+        const diffNote = document.getElementById('map-total-note');
+        const othersCard = document.getElementById('stat-others-card');
+        const othersValue = document.getElementById('stat-others-value');
+        const othersLabel = document.getElementById('stat-others-label');
+        if (this.country === 'india' || this.country === 'india-option-b') {
+            const total = this.data.total_subscribers_display || (this.data.total_subscribers / 1e7).toFixed(2) + ' Cr';
+            const stateCount = (this.data.by_state || []).length;
+            if (!totalElement.empty()) totalElement.text(total);
+            if (subtitleEl) subtitleEl.textContent = 'TRAI / GSMA estimates (Sep 2025)';
+            if (!statesElement.empty()) statesElement.text(stateCount);
+            if (diffNote) diffNote.innerHTML = `<strong>${total}</strong> total wireless subscribers. Currency: INR.`;
+            if (othersCard) othersCard.style.display = 'none';
+        } else {
+            const MOBILE_SUBSCRIBERS_TOTAL = 333;
+            const US_POPULATION_APPROX = 350;
+            if (!totalElement.empty()) totalElement.text(`${MOBILE_SUBSCRIBERS_TOTAL}M`);
+            if (subtitleEl) subtitleEl.textContent = `of ~${US_POPULATION_APPROX}M total US population`;
+            const othersCarriers = this.data.by_state.reduce((s, d) => s + (d.others_total || 0), 0);
+            const othersCarriersPost = this.data.by_state.reduce((s, d) => s + (d.others_postpaid || 0), 0);
+            const othersCarriersPre = this.data.by_state.reduce((s, d) => s + (d.others_prepaid || 0), 0);
+            if (diffNote) diffNote.innerHTML = `<strong>${MOBILE_SUBSCRIBERS_TOTAL}M</strong> total mobile subscribers (of ~${US_POPULATION_APPROX}M US population). <em>Others (carriers)</em>: ${othersCarriers.toFixed(1)}M (${othersCarriersPre.toFixed(1)} Pre + ${othersCarriersPost.toFixed(1)} Post) — Cable/Dish, etc.`;
+            if (!statesElement.empty()) statesElement.text(this.data.by_state.filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO).length);
+            if (othersCard) othersCard.style.display = '';
+            if (othersValue) othersValue.textContent = '32+19';
+            if (othersLabel) othersLabel.textContent = 'States (32 shown + 19 in Others)';
         }
     }
     
@@ -1071,8 +1175,48 @@ class MapVisualizer {
         doCheck();
     };
 
+    const updateMetricSelectForCountry = (country) => {
+        const sel = document.getElementById('metric-select');
+        if (!sel) return;
+        const indiaOpts = [
+            ['total_subscribers', 'Total (Cr)'],
+            ['jio_total', 'Jio (Cr)'],
+            ['airtel_total', 'Airtel (Cr)'],
+            ['vi_total', 'Vi (Cr)'],
+            ['bsnl_total', 'BSNL (Cr)'],
+            ['others_total', 'Others (Cr)'],
+            ['urban_subscribers', 'Urban (Cr)'],
+            ['rural_subscribers', 'Rural (Cr)'],
+            ['revenue_inr_cr', 'Revenue (INR Cr)']
+        ];
+        const usOpts = [
+            ['total_subscribers', 'Total Mobile (T)'],
+            ['total_prepaid', 'Total (Pre)'],
+            ['total_postpaid', 'Total (Post)'],
+            ['verizon_total', 'Verizon (T)'],
+            ['verizon_prepaid', 'Verizon (Pre)'],
+            ['verizon_postpaid', 'Verizon (Post)'],
+            ['tmobile_total', 'T-Mobile (T)'],
+            ['tmobile_prepaid', 'T-Mobile (Pre)'],
+            ['tmobile_postpaid', 'T-Mobile (Post)'],
+            ['att_total', 'AT&T (T)'],
+            ['att_prepaid', 'AT&T (Pre)'],
+            ['att_postpaid', 'AT&T (Post)'],
+            ['others_total', 'Others (carriers) (T)'],
+            ['others_prepaid', 'Others (carriers) (Pre)'],
+            ['others_postpaid', 'Others (carriers) (Post)'],
+            ['annual_revenue_b', 'Revenue ($B)']
+        ];
+        const opts = (country === 'india' || country === 'india-option-b') ? indiaOpts : usOpts;
+        sel.innerHTML = opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+    };
+
     const initializeMap = async () => {
-        const visualizer = new MapVisualizer('map-svg-container');
+        const countrySel = document.getElementById('country-select');
+        const country = countrySel ? countrySel.value : 'us';
+        window.__country = country;
+        updateMetricSelectForCountry(country);
+        const visualizer = new MapVisualizer('map-svg-container', country);
         window.__mapVisualizer = visualizer;
         
         try {
@@ -1109,11 +1253,30 @@ class MapVisualizer {
         }
     };
 
-    // Start checking - handle both cases robustly
+    const setupCountrySelector = () => {
+        const sel = document.getElementById('country-select');
+        if (!sel) return;
+        sel.addEventListener('change', () => {
+            window.__country = sel.value;
+            if (typeof window.clearMapCaches === 'function') window.clearMapCaches();
+            const dt = document.getElementById('data-table-container');
+            if (dt) {
+                dt.dataset.loaded = 'false';
+                dt.innerHTML = '';
+            }
+            window.dispatchEvent(new CustomEvent('country-changed', { detail: { country: sel.value } }));
+            d3.select('#map-svg-container').html('<div class="loading"><div class="spinner"></div>Loading visualization...</div>');
+            initializeMap();
+        });
+    };
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', checkLibraries, { once: true });
+        document.addEventListener('DOMContentLoaded', () => {
+            setupCountrySelector();
+            checkLibraries();
+        }, { once: true });
     } else {
-        // DOM is already ready, start immediately
+        setupCountrySelector();
         checkLibraries();
     }
 })();

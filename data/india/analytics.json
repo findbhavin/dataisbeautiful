@@ -1,0 +1,117 @@
+{
+  "country": "India",
+  "currency": "INR",
+  "unit": "Crores",
+  "source": "TRAI / Industry Reports (Q2 2024)",
+  "top10_metros": [
+    {"metro": "Mumbai", "subscribers_cr": 28.55, "revenue_inr_cr": 125000, "avg_arpu": 438},
+    {"metro": "Delhi NCR", "subscribers_cr": 27.28, "revenue_inr_cr": 118500, "avg_arpu": 434},
+    {"metro": "Bangalore", "subscribers_cr": 26.53, "revenue_inr_cr": 115200, "avg_arpu": 434},
+    {"metro": "Hyderabad", "subscribers_cr": 24.89, "revenue_inr_cr": 108500, "avg_arpu": 436},
+    {"metro": "Chennai", "subscribers_cr": 24.25, "revenue_inr_cr": 105800, "avg_arpu": 436},
+    {"metro": "Kolkata", "subscribers_cr": 23.87, "revenue_inr_cr": 104200, "avg_arpu": 437},
+    {"metro": "Pune", "subscribers_cr": 22.84, "revenue_inr_cr": 99800, "avg_arpu": 437},
+    {"metro": "Ahmedabad", "subscribers_cr": 21.56, "revenue_inr_cr": 94200, "avg_arpu": 437},
+    {"metro": "Jaipur", "subscribers_cr": 18.52, "revenue_inr_cr": 80500, "avg_arpu": 435},
+    {"metro": "Lucknow", "subscribers_cr": 17.84, "revenue_inr_cr": 77200, "avg_arpu": 433}
+  ],
+  "spectrum_by_state": [
+    {"state": "Maharashtra", "spectrum_mhz": 1280, "cost_cr": 52500, "operators": ["Jio", "Airtel", "Vi", "BSNL"]},
+    {"state": "Uttar Pradesh", "spectrum_mhz": 1150, "cost_cr": 48200, "operators": ["Jio", "Airtel", "Vi", "BSNL"]},
+    {"state": "Tamil Nadu", "spectrum_mhz": 1120, "cost_cr": 46800, "operators": ["Jio", "Airtel", "Vi", "BSNL"]},
+    {"state": "West Bengal", "spectrum_mhz": 1080, "cost_cr": 45200, "operators": ["Jio", "Airtel", "Vi", "BSNL"]},
+    {"state": "Karnataka", "spectrum_mhz": 1050, "cost_cr": 43800, "operators": ["Jio", "Airtel", "Vi", "BSNL"]},
+    {"state": "Gujarat", "spectrum_mhz": 980, "cost_cr": 41200, "operators": ["Jio", "Airtel", "Vi", "BSNL"]},
+    {"state": "Andhra Pradesh", "spectrum_mhz": 920, "cost_cr": 38500, "operators": ["Jio", "Airtel", "Vi", "BSNL"]},
+    {"state": "Telangana", "spectrum_mhz": 850, "cost_cr": 35800, "operators": ["Jio", "Airtel", "Vi", "BSNL"]},
+    {"state": "Rajasthan", "spectrum_mhz": 820, "cost_cr": 34200, "operators": ["Jio", "Airtel", "Vi", "BSNL"]},
+    {"state": "Bihar", "spectrum_mhz": 780, "cost_cr": 32500, "operators": ["Jio", "Airtel", "Vi", "BSNL"]}
+  ],
+  "revenue_by_state": [
+    {"state": "Maharashtra", "revenue_inr_cr": 485000, "growth_pct": 8.5},
+    {"state": "Uttar Pradesh", "revenue_inr_cr": 425000, "growth_pct": 7.2},
+    {"state": "Tamil Nadu", "revenue_inr_cr": 352000, "growth_pct": 9.1},
+    {"state": "West Bengal", "revenue_inr_cr": 325000, "growth_pct": 6.8},
+    {"state": "Karnataka", "revenue_inr_cr": 285000, "growth_pct": 10.2},
+    {"state": "Gujarat", "revenue_inr_cr": 312000, "growth_pct": 8.8},
+    {"state": "Andhra Pradesh", "revenue_inr_cr": 182000, "growth_pct": 5.4},
+    {"state": "Telangana", "revenue_inr_cr": 168000, "growth_pct": 9.5},
+    {"state": "Rajasthan", "revenue_inr_cr": 248000, "growth_pct": 7.6},
+    {"state": "Bihar", "revenue_inr_cr": 245000, "growth_pct": 6.2},
+    {"state": "Madhya Pradesh", "revenue_inr_cr": 268000, "growth_pct": 7.1},
+    {"state": "Delhi", "revenue_inr_cr": 185000, "growth_pct": 10.8},
+    {"state": "Punjab", "revenue_inr_cr": 98000, "growth_pct": 5.2},
+    {"state": "Haryana", "revenue_inr_cr": 102000, "growth_pct": 9.2},
+    {"state": "Kerala", "revenue_inr_cr": 142000, "growth_pct": 8.5}
+  ],
+  "market_share": [
+    {
+      "operator": "Jio",
+      "share_pct": 38.5,
+      "subscribers_cr": 45.5,
+      "revenue_share_pct": 36.2,
+      "insight": "Market leader with aggressive 5G rollout"
+    },
+    {
+      "operator": "Airtel",
+      "share_pct": 32.1,
+      "subscribers_cr": 37.9,
+      "revenue_share_pct": 34.8,
+      "insight": "Premium positioning with strong ARPU"
+    },
+    {
+      "operator": "Vi (Vodafone Idea)",
+      "share_pct": 18.9,
+      "subscribers_cr": 22.3,
+      "revenue_share_pct": 17.2,
+      "insight": "Struggling with debt, losing subscribers"
+    },
+    {
+      "operator": "BSNL/MTNL",
+      "share_pct": 8.2,
+      "subscribers_cr": 9.7,
+      "revenue_share_pct": 9.5,
+      "insight": "State-owned, reviving with 4G launch"
+    },
+    {
+      "operator": "Others",
+      "share_pct": 2.3,
+      "subscribers_cr": 2.7,
+      "revenue_share_pct": 2.3,
+      "insight": "Small regional operators"
+    }
+  ],
+  "technology_adoption": {
+    "5G": {"subscribers_cr": 15.2, "penetration_pct": 12.9},
+    "4G": {"subscribers_cr": 89.5, "penetration_pct": 75.7},
+    "3G": {"subscribers_cr": 9.8, "penetration_pct": 8.3},
+    "2G": {"subscribers_cr": 3.7, "penetration_pct": 3.1}
+  },
+  "subscriber_demographics": {
+    "urban": {"subscribers_cr": 68.5, "penetration_pct": 58.0},
+    "rural": {"subscribers_cr": 49.7, "penetration_pct": 42.0},
+    "postpaid": {"subscribers_cr": 35.8, "penetration_pct": 30.3},
+    "prepaid": {"subscribers_cr": 82.4, "penetration_pct": 69.7}
+  },
+  "arpu_trends": {
+    "current_arpu_inr": 152,
+    "yoy_growth_pct": 12.5,
+    "jio_arpu": 148,
+    "airtel_arpu": 185,
+    "vi_arpu": 121,
+    "bsnl_arpu": 95
+  },
+  "network_infrastructure": {
+    "total_towers": 785000,
+    "fiberized_towers": 425000,
+    "5g_towers": 125000,
+    "tower_density_per_1000_sq_km": 238
+  },
+  "data_consumption": {
+    "avg_monthly_data_gb": 18.5,
+    "total_data_consumption_pb": 18200,
+    "video_streaming_pct": 52,
+    "social_media_pct": 28,
+    "other_pct": 20
+  }
+}
