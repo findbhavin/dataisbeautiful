@@ -1,6 +1,7 @@
 """
 Data loader service for loading and normalizing CSV data.
 """
+import json
 import pandas as pd
 from pathlib import Path
 from typing import Dict, Any, List
@@ -32,9 +33,10 @@ def load_mobile_subscribers_data() -> Dict[str, Any]:
     for _, row in df.iterrows():
         state_iso = row['state_iso']
         
+        state_name = get_state_name(state_iso) or state_iso
         state_data = {
             'state_iso': state_iso,
-            'state_name': get_state_name(state_iso) or state_iso,
+            'state_name': state_name,
             'latitude': float(row['Latitude']),
             'longitude': float(row['Longitude']),
             'total_subscribers': float(row['Total Mobile (T)']),
@@ -55,7 +57,20 @@ def load_mobile_subscribers_data() -> Dict[str, Any]:
         }
         by_state.append(state_data)
     
-    # Available metrics - now includes all 15 metrics
+    # Merge revenue from revenue_by_state.json for map heat view
+    revenue_path = Path(__file__).parent.parent.parent / "data" / "revenue_by_state.json"
+    revenue_by_state_name: Dict[str, float] = {}
+    if revenue_path.exists():
+        try:
+            rev_data = json.loads(revenue_path.read_text())
+            for item in rev_data.get("revenue_top10", []):
+                revenue_by_state_name[item.get("state", "").strip()] = float(item.get("annual_revenue_b", 0))
+        except Exception:
+            pass
+    for s in by_state:
+        name = s.get("state_name", "")
+        s["annual_revenue_b"] = revenue_by_state_name.get(name, 0)
+
     metrics_available = [
         'total_subscribers',
         'total_prepaid',
@@ -71,9 +86,10 @@ def load_mobile_subscribers_data() -> Dict[str, Any]:
         'att_postpaid',
         'others_total',
         'others_prepaid',
-        'others_postpaid'
+        'others_postpaid',
+        'annual_revenue_b',
     ]
-    
+
     return {
         'total_subscribers': total_subscribers,
         'by_state': by_state,

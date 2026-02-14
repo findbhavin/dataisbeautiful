@@ -4,8 +4,35 @@ Router for mobile subscribers data API endpoints.
 from fastapi import APIRouter, HTTPException
 from typing import Dict, Any
 from app.services.data_loader import load_mobile_subscribers_data, get_state_detail
+from app.services.india_data_loader import load_india_mobile_data, get_india_state_detail
 
 router = APIRouter(prefix="/api/mobile", tags=["mobile"])
+
+
+@router.get("/india/data")
+async def get_india_mobile_data() -> Dict[str, Any]:
+    """
+    Get India mobile subscribers data by state (TRAI/GSMA style).
+    All values in Cr (Crores), currency INR.
+    """
+    try:
+        return load_india_mobile_data()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error loading India mobile data: {str(e)}")
+
+
+@router.get("/india/state/{state_iso}")
+async def get_india_state_data(state_iso: str) -> Dict[str, Any]:
+    """Get mobile data for a specific India state."""
+    try:
+        state_data = get_india_state_detail(state_iso)
+        if state_data is None:
+            raise HTTPException(status_code=404, detail=f"State {state_iso} not found")
+        return state_data
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/data")

@@ -19,7 +19,14 @@
     <!-- Header -->
     <div class="header">
         <h1>MapVisual Engine</h1>
-        <p>Interactive US Mobile Subscribers Visualization</p>
+        <p>Interactive Mobile Subscribers Visualization</p>
+        <div class="country-selector">
+            <label for="country-select">Map:</label>
+            <select id="country-select">
+                <option value="india-option-b" selected>India</option>
+                <option value="us">United States</option>
+            </select>
+        </div>
     </div>
     
     <!-- Page Switcher -->
@@ -35,15 +42,15 @@
             <div class="stat-card">
                 <div class="stat-value" id="stat-total">-</div>
                 <div class="stat-label">Mobile Subscribers</div>
-                <div class="stat-subtitle" id="stat-total-subtitle">of ~350M total US population</div>
+                <div class="stat-subtitle" id="stat-total-subtitle">Loading...</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value" id="stat-states">-</div>
                 <div class="stat-label">States Shown on Map</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value">32+19</div>
-                <div class="stat-label">States (32 shown + 19 in Others)</div>
+            <div class="stat-card" id="stat-others-card">
+                <div class="stat-value" id="stat-others-value">32+19</div>
+                <div class="stat-label" id="stat-others-label">States (32 shown + 19 in Others)</div>
             </div>
         </div>
         <div id="map-total-note" class="map-total-note glass-container fade-in"></div>
@@ -81,6 +88,7 @@
                 <label class="control-label" for="map-mode-select">Map Mode</label>
                 <select id="map-mode-select">
                     <option value="subscribers">Subscribers</option>
+                    <option value="market-value">Market Value Heatmap</option>
                     <option value="data-centers">Data Centers</option>
                     <option value="dc-tiers">Data Center Tiers</option>
                     <option value="hub-pairs">Hub Pairs</option>
@@ -104,7 +112,8 @@
             </div>
             <div class="control-group" id="metric-control-group">
                 <label class="control-label" for="metric-select">Select Metric</label>
-                <select id="metric-select" title="Others = Cable/Dish etc. (6.9M total: 5.6 Pre + 1.3 Post)">
+                <select id="metric-select" title="Select metric to display on map">
+                    <!-- US options (default) -->
                     <option value="total_subscribers">Total Mobile (T)</option>
                     <option value="total_prepaid">Total (Pre)</option>
                     <option value="total_postpaid">Total (Post)</option>
@@ -327,7 +336,10 @@
                             s.classList.toggle('active', s.dataset.page === page);
                         });
                         document.getElementById('legend-map').style.display = (page === 'map') ? 'block' : 'none';
-                        if (page === 'data') loadDataTable();
+                        if (page === 'data') {
+                            updateDataPageForCountry();
+                            loadDataTable();
+                        }
                         if (page === 'analytics') {
                             setTimeout(() => document.querySelector('.analytics-page .tab-btn.active')?.click(), 50);
                         }
@@ -376,45 +388,88 @@
                     await renderHubPairMap('hub-pairs-output', raw);
                 });
                 
+                // Sync Data page UI with country (hide US "Others" when India)
+                function updateDataPageForCountry() {
+                    const isIndia = window.__country === 'india' || window.__country === 'india-option-b';
+                    document.querySelector('.info-banner')?.style.setProperty('display', isIndia ? 'none' : '');
+                    document.querySelector('.others-data-card')?.style.setProperty('display', isIndia ? 'none' : '');
+                    const h3 = document.querySelector('.data-table-section h3');
+                    if (h3) h3.textContent = isIndia ? 'State-by-State Data (India)' : 'State-by-State Data (32 states + Others aggregate)';
+                }
+                window.addEventListener('country-changed', () => {
+                    updateDataPageForCountry();
+                    const dataSection = document.querySelector('.page-section[data-page="data"]');
+                    if (dataSection?.classList.contains('active')) {
+                        const c = document.getElementById('data-table-container');
+                        if (c) { c.dataset.loaded = 'false'; c.innerHTML = ''; }
+                        setTimeout(loadDataTable, 100);
+                    }
+                    const analyticsSection = document.querySelector('.page-section[data-page="analytics"]');
+                    if (analyticsSection?.classList.contains('active')) {
+                        const activeTab = document.querySelector('.analytics-page .tab-btn.active');
+                        if (activeTab) setTimeout(() => activeTab.click(), 150);
+                    }
+                });
+
                 // Load data table when Data page is first shown
                 function loadDataTable() {
                     const container = document.getElementById('data-table-container');
                     if (!container || container.dataset.loaded === 'true') return;
-                    fetch('/api/mobile/data').then(r => r.json()).then(data => {
+                    const country = window.__country || 'us';
+                    const url = (country === 'india' || country === 'india-option-b') ? '/api/mobile/india/data' : '/api/mobile/data';
+                    fetch(url).then(r => r.json()).then(data => {
                         if (!data.by_state || data.by_state.length === 0) {
                             container.innerHTML = '<p>No data available.</p>';
                             return;
                         }
                         const fmt = v => typeof v === 'number' ? (v >= 1 ? v.toFixed(1) : v.toFixed(2)) : (v || '-');
+                        const isIndia = country === 'india' || country === 'india-option-b';
                         let html = '<table class="data-table data-table-operators"><thead><tr>';
-                        html += '<th>State/District</th><th>Total Mobile<br><small>(Pre | Post)</small></th>';
-                        html += '<th class="col-verizon">Verizon<br><small>(Total | Pre | Post)</small></th>';
-                        html += '<th class="col-tmobile">T-Mobile<br><small>(Total | Pre | Post)</small></th>';
-                        html += '<th class="col-att">AT&amp;T<br><small>(Total | Pre | Post)</small></th>';
-                        html += '<th class="col-others">Others (carriers)<br><small>(Total | Pre | Post)</small></th>';
+                        html += '<th>State/District</th>';
+                        if (isIndia) {
+                            html += '<th>Total (Cr)</th><th>Jio</th><th>Airtel</th><th>Vi</th><th>BSNL</th><th>Others</th><th>Urban</th><th>Rural</th>';
+                        } else {
+                            html += '<th>Total Mobile<br><small>(Pre | Post)</small></th>';
+                            html += '<th class="col-verizon">Verizon<br><small>(Total | Pre | Post)</small></th>';
+                            html += '<th class="col-tmobile">T-Mobile<br><small>(Total | Pre | Post)</small></th>';
+                            html += '<th class="col-att">AT&amp;T<br><small>(Total | Pre | Post)</small></th>';
+                            html += '<th class="col-others">Others (carriers)<br><small>(Total | Pre | Post)</small></th>';
+                        }
                         html += '</tr></thead><tbody>';
-                        const totals = { total: 0, total_pre: 0, total_post: 0, vz: 0, vz_pre: 0, vz_post: 0, tm: 0, tm_pre: 0, tm_post: 0, att: 0, att_pre: 0, att_post: 0, oth: 0, oth_pre: 0, oth_post: 0 };
+                        const totals = isIndia ? {} : { total: 0, total_pre: 0, total_post: 0, vz: 0, vz_pre: 0, vz_post: 0, tm: 0, tm_pre: 0, tm_post: 0, att: 0, att_pre: 0, att_post: 0, oth: 0, oth_pre: 0, oth_post: 0 };
                         data.by_state.forEach((row, i) => {
-                            totals.total += row.total_subscribers; totals.total_pre += row.total_prepaid; totals.total_post += row.total_postpaid;
-                            totals.vz += row.verizon_total; totals.vz_pre += row.verizon_prepaid; totals.vz_post += row.verizon_postpaid;
-                            totals.tm += row.tmobile_total; totals.tm_pre += row.tmobile_prepaid; totals.tm_post += row.tmobile_postpaid;
-                            totals.att += row.att_total; totals.att_pre += row.att_prepaid; totals.att_post += row.att_postpaid;
-                            totals.oth += row.others_total; totals.oth_pre += row.others_prepaid; totals.oth_post += row.others_postpaid;
+                            if (isIndia) {
+                                Object.keys(row).filter(k => ['total_subscribers','jio_total','airtel_total','vi_total','bsnl_total','others_total','urban_subscribers','rural_subscribers'].includes(k)).forEach(k => { totals[k] = (totals[k] || 0) + (row[k] || 0); });
+                            } else {
+                                totals.total += row.total_subscribers; totals.total_pre += row.total_prepaid; totals.total_post += row.total_postpaid;
+                                totals.vz += row.verizon_total; totals.vz_pre += row.verizon_prepaid; totals.vz_post += row.verizon_postpaid;
+                                totals.tm += row.tmobile_total; totals.tm_pre += row.tmobile_prepaid; totals.tm_post += row.tmobile_postpaid;
+                                totals.att += row.att_total; totals.att_pre += row.att_prepaid; totals.att_post += row.att_postpaid;
+                                totals.oth += row.others_total; totals.oth_pre += row.others_prepaid; totals.oth_post += row.others_postpaid;
+                            }
                             html += '<tr>';
                             html += '<td><strong>' + (row.state_name || row.state_iso) + '</strong></td>';
-                            html += '<td>' + fmt(row.total_subscribers) + '<br><small>(' + fmt(row.total_prepaid) + ' | ' + fmt(row.total_postpaid) + ')</small></td>';
-                            html += '<td class="col-verizon">' + fmt(row.verizon_total) + '<br><small>(' + fmt(row.verizon_prepaid) + ' | ' + fmt(row.verizon_postpaid) + ')</small></td>';
-                            html += '<td class="col-tmobile">' + fmt(row.tmobile_total) + '<br><small>(' + fmt(row.tmobile_prepaid) + ' | ' + fmt(row.tmobile_postpaid) + ')</small></td>';
-                            html += '<td class="col-att">' + fmt(row.att_total) + '<br><small>(' + fmt(row.att_prepaid) + ' | ' + fmt(row.att_postpaid) + ')</small></td>';
-                            html += '<td class="col-others">' + fmt(row.others_total) + '<br><small>(' + fmt(row.others_prepaid) + ' | ' + fmt(row.others_postpaid) + ')</small></td>';
+                            if (isIndia) {
+                                html += '<td>' + fmt(row.total_subscribers) + '</td><td>' + fmt(row.jio_total) + '</td><td>' + fmt(row.airtel_total) + '</td><td>' + fmt(row.vi_total) + '</td><td>' + fmt(row.bsnl_total) + '</td><td>' + fmt(row.others_total) + '</td><td>' + fmt(row.urban_subscribers) + '</td><td>' + fmt(row.rural_subscribers) + '</td>';
+                            } else {
+                                html += '<td>' + fmt(row.total_subscribers) + '<br><small>(' + fmt(row.total_prepaid) + ' | ' + fmt(row.total_postpaid) + ')</small></td>';
+                                html += '<td class="col-verizon">' + fmt(row.verizon_total) + '<br><small>(' + fmt(row.verizon_prepaid) + ' | ' + fmt(row.verizon_postpaid) + ')</small></td>';
+                                html += '<td class="col-tmobile">' + fmt(row.tmobile_total) + '<br><small>(' + fmt(row.tmobile_prepaid) + ' | ' + fmt(row.tmobile_postpaid) + ')</small></td>';
+                                html += '<td class="col-att">' + fmt(row.att_total) + '<br><small>(' + fmt(row.att_prepaid) + ' | ' + fmt(row.att_postpaid) + ')</small></td>';
+                                html += '<td class="col-others">' + fmt(row.others_total) + '<br><small>(' + fmt(row.others_prepaid) + ' | ' + fmt(row.others_postpaid) + ')</small></td>';
+                            }
                             html += '</tr>';
                         });
                         html += '<tr class="total-row"><td><strong>Total</strong></td>';
-                        html += '<td><strong>' + fmt(totals.total) + '</strong><br><small>(' + fmt(totals.total_pre) + ' | ' + fmt(totals.total_post) + ')</small></td>';
-                        html += '<td class="col-verizon"><strong>' + fmt(totals.vz) + '</strong><br><small>(' + fmt(totals.vz_pre) + ' | ' + fmt(totals.vz_post) + ')</small></td>';
-                        html += '<td class="col-tmobile"><strong>' + fmt(totals.tm) + '</strong><br><small>(' + fmt(totals.tm_pre) + ' | ' + fmt(totals.tm_post) + ')</small></td>';
-                        html += '<td class="col-att"><strong>' + fmt(totals.att) + '</strong><br><small>(' + fmt(totals.att_pre) + ' | ' + fmt(totals.att_post) + ')</small></td>';
-                        html += '<td class="col-others"><strong>' + fmt(totals.oth) + '</strong><br><small>(' + fmt(totals.oth_pre) + ' | ' + fmt(totals.oth_post) + ')</small></td>';
+                        if (isIndia) {
+                            html += '<td><strong>' + fmt(totals.total_subscribers) + '</strong></td><td>' + fmt(totals.jio_total) + '</td><td>' + fmt(totals.airtel_total) + '</td><td>' + fmt(totals.vi_total) + '</td><td>' + fmt(totals.bsnl_total) + '</td><td>' + fmt(totals.others_total) + '</td><td>' + fmt(totals.urban_subscribers) + '</td><td>' + fmt(totals.rural_subscribers) + '</td>';
+                        } else {
+                            html += '<td><strong>' + fmt(totals.total) + '</strong><br><small>(' + fmt(totals.total_pre) + ' | ' + fmt(totals.total_post) + ')</small></td>';
+                            html += '<td class="col-verizon"><strong>' + fmt(totals.vz) + '</strong><br><small>(' + fmt(totals.vz_pre) + ' | ' + fmt(totals.vz_post) + ')</small></td>';
+                            html += '<td class="col-tmobile"><strong>' + fmt(totals.tm) + '</strong><br><small>(' + fmt(totals.tm_pre) + ' | ' + fmt(totals.tm_post) + ')</small></td>';
+                            html += '<td class="col-att"><strong>' + fmt(totals.att) + '</strong><br><small>(' + fmt(totals.att_pre) + ' | ' + fmt(totals.att_post) + ')</small></td>';
+                            html += '<td class="col-others"><strong>' + fmt(totals.oth) + '</strong><br><small>(' + fmt(totals.oth_pre) + ' | ' + fmt(totals.oth_post) + ')</small></td>';
+                        }
                         html += '</tr></tbody></table>';
                         container.innerHTML = html;
                         container.dataset.loaded = 'true';
