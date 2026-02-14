@@ -277,6 +277,16 @@ class MapVisualizer {
                 this.showError('Map data is empty. Please refresh the page.');
                 return;
             }
+
+            // India regression fix: avoid hardcoded scale/translate on small screens.
+            // Fit loaded India geometry to the current SVG viewport so all regions render correctly.
+            if (this.country === 'india') {
+                this.projection.fitExtent(
+                    [[20, 20], [this.width - 20, this.height - 20]],
+                    states
+                );
+                this.path = d3.geoPath().projection(this.projection);
+            }
             
             // Setup color scale based on current metric
             this.updateColorScale();
