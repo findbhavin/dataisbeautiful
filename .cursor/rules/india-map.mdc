@@ -1,0 +1,18 @@
+---
+description: India map configuration - Option B only, full POK+Ladakh boundaries
+alwaysApply: false
+globs: templates/index.html,static/js/map_semantic_zoom.js,app/routers/geo.py
+---
+
+# India Map Configuration
+
+## Map Options
+- **India** uses Option B only (`india-option-b`). Do NOT add "India - Legacy" or any legacy Subhash9325 option to the Map dropdown.
+- Map dropdown: India, United States (no Legacy variant).
+
+## Data Sources
+- India Option B: `/api/geo/india/option-b/geojson` — udit-001 base + POK (datameet) merged into J&K + full Ladakh (india-in-data).
+- Full India-claimed boundaries: POK, Leh, Kargil, Aksai Chin (matches indiamaps.netlify.app).
+
+## Projection
+- Mercator center [77.5, 22], scale 600 for bounds [68,6]-[97,38].

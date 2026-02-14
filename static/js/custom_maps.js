@@ -7,7 +7,7 @@ const INDIA_STATE_NAME_TO_KEY = {
     'Chhattisgarh': 'Chhattisgarh', 'Gujarat': 'Gujarat', 'Karnataka': 'Karnataka', 'Rajasthan': 'Rajasthan',
     'West Bengal': 'West Bengal', 'Tamil Nadu': 'Tamil Nadu', 'Delhi': 'Delhi', 'Kerala': 'Kerala',
     'Odisha': 'Odisha', 'Punjab': 'Punjab', 'Haryana': 'Haryana', 'Assam': 'Assam',
-    'Jammu and Kashmir': 'Jammu and Kashmir', 'Uttarakhand': 'Uttarakhand', 'Himachal Pradesh': 'Himachal Pradesh',
+    'Jammu and Kashmir': 'Jammu and Kashmir', 'Jammu & Kashmir': 'Jammu and Kashmir', 'Uttarakhand': 'Uttarakhand', 'Himachal Pradesh': 'Himachal Pradesh',
     'Goa': 'Goa', 'Manipur': 'Manipur', 'Meghalaya': 'Meghalaya', 'Mizoram': 'Mizoram', 'Nagaland': 'Nagaland',
     'Tripura': 'Tripura', 'Arunachal Pradesh': 'Arunachal Pradesh', 'Sikkim': 'Sikkim', 'Chandigarh': 'Chandigarh',
     'Andaman and Nicobar': 'Andaman and Nicobar', 'Ladakh': 'Ladakh', 'Puducherry': 'Puducherry'
@@ -43,12 +43,12 @@ const HUB_PAIRS_COLORS = { dual: '#0284c7', single: '#16a34a', superCore: '#dc26
 
 async function loadHubPairsDefault() {
     const country = window.__country || 'us';
-    const cacheKey = country === 'india' ? 'india' : 'us';
+    const cacheKey = (country === 'india' || country === 'india-option-b') ? 'india' : 'us';
     if (hubPairsDefaultCache && window.__hubPairsCacheCountry === cacheKey) return hubPairsDefaultCache;
     try {
-        const r = await fetch(country === 'india' ? '/api/analytics/india/hub-pairs' : '/api/analytics/hub-pairs');
+        const r = await fetch((country === 'india' || country === 'india-option-b') ? '/api/analytics/india/hub-pairs' : '/api/analytics/hub-pairs');
         const data = await r.json();
-        const coords = await (country === 'india' ? loadIndiaCityCoords() : loadCityCoords());
+        const coords = await ((country === 'india' || country === 'india-option-b') ? loadIndiaCityCoords() : loadCityCoords());
         function resolveCoords(name) {
             if (!name) return null;
             let c = coords[name] || coords[name.replace(/\s*\([^)]*\)\s*$/, '').trim()];
@@ -101,12 +101,12 @@ async function loadIndiaCityCoords() {
 
 async function loadDataCenterTiers() {
     const country = window.__country || 'us';
-    const cacheKey = country === 'india' ? 'india' : 'us';
+    const cacheKey = (country === 'india' || country === 'india-option-b') ? 'india' : 'us';
     if (dataCenterTiersCache && window.__dcTiersCacheCountry === cacheKey) return dataCenterTiersCache;
     try {
-        const r = await fetch(country === 'india' ? '/api/analytics/india/data-center-tiers' : '/api/analytics/data-center-tiers');
+        const r = await fetch((country === 'india' || country === 'india-option-b') ? '/api/analytics/india/data-center-tiers' : '/api/analytics/data-center-tiers');
         const data = await r.json();
-        const toKey = country === 'india' ? (s) => (s.state && INDIA_STATE_NAME_TO_KEY[s.state]) || s.state : (s) => stateNameToIso(s.state);
+        const toKey = (country === 'india' || country === 'india-option-b') ? (s) => (s.state && INDIA_STATE_NAME_TO_KEY[s.state]) || s.state : (s) => stateNameToIso(s.state);
         const tier1 = new Set((data.tier1?.states || []).map(toKey).filter(Boolean));
         const tier2 = new Set((data.tier2?.states || []).map(toKey).filter(Boolean));
         const tier3 = new Set((data.tier3?.states || []).map(toKey).filter(Boolean));
