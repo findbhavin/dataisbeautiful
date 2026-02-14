@@ -147,13 +147,14 @@ class MapVisualizer {
         // Create container group for zoom
         this.g = this.svg.append('g');
         
-        // Setup projection: US uses AlbersUsa, India uses Mercator centered on India
+        // Setup projection: US uses AlbersUsa, India uses Mercator
+        // Bounds [68,6]-[97,38] include POK (west) and Aksai Chin (east) for full India-claimed territory
         if (this.country === 'india' || this.country === 'india-option-b') {
             this.projection = d3.geoMercator()
-                .center([78, 22])
+                .center([77.5, 22])
                 .translate([this.width / 2, this.height / 2])
-                .scale(700);
-            this.debugLog('[MapVisualizer] Projection configured: Mercator (India), scale=700');
+                .scale(600);
+            this.debugLog('[MapVisualizer] Projection configured: Mercator (India), bounds [68,6]-[97,38], scale=600');
         } else {
             this.projection = d3.geoAlbersUsa()
                 .translate([this.width / 2, this.height / 2])
@@ -223,7 +224,7 @@ class MapVisualizer {
                 if (geoRes.ok) {
                     const geojson = await geoRes.json();
                     if (geojson?.features?.length) {
-                        console.log('✓ Loaded India GeoJSON:', geojson.features.length, 'states');
+                        console.log('✓ Loaded India GeoJSON (legacy):', geojson.features.length, 'states');
                         return { type: 'geojson', data: geojson };
                     }
                 }

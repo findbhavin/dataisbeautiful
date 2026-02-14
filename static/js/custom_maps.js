@@ -7,7 +7,7 @@ const INDIA_STATE_NAME_TO_KEY = {
     'Chhattisgarh': 'Chhattisgarh', 'Gujarat': 'Gujarat', 'Karnataka': 'Karnataka', 'Rajasthan': 'Rajasthan',
     'West Bengal': 'West Bengal', 'Tamil Nadu': 'Tamil Nadu', 'Delhi': 'Delhi', 'Kerala': 'Kerala',
     'Odisha': 'Odisha', 'Punjab': 'Punjab', 'Haryana': 'Haryana', 'Assam': 'Assam',
-    'Jammu and Kashmir': 'Jammu and Kashmir', 'Uttarakhand': 'Uttarakhand', 'Himachal Pradesh': 'Himachal Pradesh',
+    'Jammu and Kashmir': 'Jammu and Kashmir', 'Jammu & Kashmir': 'Jammu and Kashmir', 'Uttarakhand': 'Uttarakhand', 'Himachal Pradesh': 'Himachal Pradesh',
     'Goa': 'Goa', 'Manipur': 'Manipur', 'Meghalaya': 'Meghalaya', 'Mizoram': 'Mizoram', 'Nagaland': 'Nagaland',
     'Tripura': 'Tripura', 'Arunachal Pradesh': 'Arunachal Pradesh', 'Sikkim': 'Sikkim', 'Chandigarh': 'Chandigarh',
     'Andaman and Nicobar': 'Andaman and Nicobar', 'Ladakh': 'Ladakh', 'Puducherry': 'Puducherry'
