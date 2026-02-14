@@ -9,6 +9,8 @@ import json
 from typing import Dict, Any
 
 router = APIRouter(prefix="/api/geo", tags=["geo"])
+INDIA_GEOJSON_PRIMARY_URL = "https://code.highcharts.com/mapdata/countries/in/in-all.geo.json"
+INDIA_GEOJSON_FALLBACK_URL = "https://raw.githubusercontent.com/Subhash9325/GeoJson-Data-of-Indian-States/master/Indian_States"
 
 
 @router.get("/topojson/states")
@@ -144,11 +146,31 @@ async def get_india_city_coordinates() -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Error loading India city coordinates: {str(e)}")
 
 
+def _normalize_india_feature_names(data: dict) -> dict:
+    """
+    Normalize state/UT names to a consistent schema used by frontend/data lookups.
+    """
+    alias_map = {
+        "Andaman and Nicobar Islands": "Andaman and Nicobar",
+    }
+    for feature in data.get("features", []):
+        props = feature.setdefault("properties", {})
+        raw_name = props.get("NAME_1") or props.get("name")
+        if not raw_name:
+            continue
+        canonical = alias_map.get(raw_name, raw_name)
+        props["NAME_1"] = canonical
+        props["name"] = canonical
+    return data
+
+
 def _merge_pok_into_india(data: dict) -> dict:
     """Merge POK (Pakistan-occupied Kashmir) polygons into India GeoJSON."""
     has_pok = any(
         "POK" in str(f.get("properties", {}).get("NAME_1", "")) or
-        "Pakistan-occupied" in str(f.get("properties", {}).get("NAME_1", ""))
+        "Pakistan-occupied" in str(f.get("properties", {}).get("NAME_1", "")) or
+        "POK" in str(f.get("properties", {}).get("name", "")) or
+        "Pakistan-occupied" in str(f.get("properties", {}).get("name", ""))
         for f in data.get("features", [])
     )
     if has_pok:
@@ -187,29 +209,35 @@ async def get_india_states_geojson() -> Dict[str, Any]:
     """
     import urllib.request
     geojson_path = Path(__file__).parent.parent.parent / "data" / "india" / "indian_states.geojson"
+
+    # 1) Local file first (preferred for reproducibility/offline use)
     try:
         if geojson_path.exists():
             with open(geojson_path, 'r') as f:
                 data = json.load(f)
+            data = _normalize_india_feature_names(data)
             data = _merge_pok_into_india(data)
-        else:
-            url = "https://raw.githubusercontent.com/Subhash9325/GeoJson-Data-of-Indian-States/master/Indian_States"
-            with urllib.request.urlopen(url, timeout=10) as r:
-                data = json.loads(r.read().decode())
-            data = _merge_pok_into_india(data)
-        if data.get('features'):
-            return data
+            if data.get('features'):
+                return data
     except Exception:
         pass
-    try:
-        url = "https://raw.githubusercontent.com/Subhash9325/GeoJson-Data-of-Indian-States/master/Indian_States"
-        with urllib.request.urlopen(url, timeout=10) as r:
-            data = json.loads(r.read().decode())
-        data = _merge_pok_into_india(data)
-        if data.get('features'):
-            return data
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"India GeoJSON unavailable: {str(e)}")
+
+    # 2) CDN fallbacks (primary includes Ladakh; secondary kept for resilience)
+    last_error = None
+    for url in [INDIA_GEOJSON_PRIMARY_URL, INDIA_GEOJSON_FALLBACK_URL]:
+        try:
+            with urllib.request.urlopen(url, timeout=10) as r:
+                data = json.loads(r.read().decode())
+            data = _normalize_india_feature_names(data)
+            data = _merge_pok_into_india(data)
+            if data.get('features'):
+                return data
+        except Exception as e:
+            last_error = e
+            continue
+
+    if last_error:
+        raise HTTPException(status_code=502, detail=f"India GeoJSON unavailable: {str(last_error)}")
     raise HTTPException(status_code=404, detail="India GeoJSON not found. Run: py scripts/download_india_geojson_with_pok.py")
 
 
