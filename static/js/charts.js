@@ -39,13 +39,13 @@ function getOperatorColor(operatorName) {
 
 // Helper function to build market share tooltip
 function buildMarketShareTooltip(data) {
-    const operatorName = data.carrier || data.operator;
-    const sharePct = data.subscriber_share_pct || data.share_pct;
-    const revenuePct = data.revenue_share_pct || 0;
+    const operatorName = data.carrier || data.operator || 'Unknown';
+    const sharePct = Number(data.subscriber_share_pct ?? data.share_pct ?? data.subscriberShare ?? 0);
+    const revenuePct = Number(data.revenue_share_pct ?? data.revenueShare ?? 0);
     const insight = data.insight || '';
     
-    let html = `<strong>${operatorName}</strong><br>Subscriber share: ${sharePct}%`;
-    if (revenuePct) html += `<br>Revenue share: ${revenuePct}%`;
+    let html = `<strong>${operatorName}</strong><br>Subscriber share: ${sharePct.toFixed(1)}%`;
+    if (revenuePct > 0) html += `<br>Revenue share: ${revenuePct.toFixed(1)}%`;
     if (insight) html += `<br><em>${insight}</em>`;
     return html;
 }
@@ -96,24 +96,41 @@ async function renderMarketSharePie(containerId, data) {
     }
     if (!ensureContainerVisible(containerId)) return;
 
-    // Donut chart: center shows total; slices show subscriber share
-    const width = 420, height = 420, radius = Math.min(width, height) / 2 - 50;
-    const innerRadius = radius * 0.55; // Donut hole
-    const svg = container.append('svg').attr('width', width).attr('height', height)
-        .append('g').attr('transform', `translate(${width/2},${height/2})`);
+    const isIndia = data.country === 'India' || (window.__country === 'india' || window.__country === 'india-option-b');
+    const isLight = document.body.classList.contains('theme-light');
+    const chartData = data.market_share.map(d => ({
+        operator: d.carrier || d.operator || 'Unknown',
+        subscriberShare: Number(d.subscriber_share_pct ?? d.share_pct ?? 0),
+        revenueShare: Number(d.revenue_share_pct ?? 0),
+        subscribersCr: Number(d.subscribers_cr ?? 0),
+        insight: d.insight || ''
+    }));
+
+    // Requested sizing: donut area uses ~2:1 width:height.
+    const width = Math.max(720, Math.min(940, Math.round(container.node()?.clientWidth || 760)));
+    const height = Math.round(width / 2);
+    const radius = Math.min(height * 0.39, width * 0.2);
+    const innerRadius = radius * 0.56;
+    const rawLabelRadius = radius + Math.max(26, radius * 0.2);
+    const labelRadius = Math.min(rawLabelRadius, (height / 2) - 16);
+    const svg = container.append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .style('max-width', '100%')
+        .append('g')
+        .attr('transform', `translate(${width / 2},${height / 2})`);
 
     const color = d3.scaleOrdinal()
-        .domain(data.market_share.map(d => d.carrier || d.operator))
-        .range(data.market_share.map(d => getOperatorColor(d.carrier || d.operator)));
+        .domain(chartData.map(d => d.operator))
+        .range(chartData.map(d => getOperatorColor(d.operator)));
 
-    const pie = d3.pie().value(d => d.subscriber_share_pct || d.share_pct).sort(null);
+    const pie = d3.pie().value(d => d.subscriberShare).sort(null);
     const arc = d3.arc().innerRadius(innerRadius).outerRadius(radius).cornerRadius(4);
-    const arcLabel = d3.arc().innerRadius(radius * 0.75).outerRadius(radius * 0.75);
 
-    const arcs = svg.selectAll('arc').data(pie(data.market_share)).join('g');
+    const arcs = svg.selectAll('arc').data(pie(chartData)).join('g');
     arcs.append('path')
         .attr('d', arc)
-        .attr('fill', d => color(d.data.carrier || d.data.operator))
+        .attr('fill', d => color(d.data.operator))
         .attr('stroke', 'rgba(255,255,255,0.4)')
         .attr('stroke-width', 1.5)
         .style('cursor', 'pointer')
@@ -130,19 +147,28 @@ async function renderMarketSharePie(containerId, data) {
             return t => arc(i(t));
         });
 
-    const isLight = document.body.classList.contains('theme-light');
     const labelFill = isLight ? '#1e293b' : '#fff';
-    arcs.filter(d => (d.endAngle - d.startAngle) > 0.15).append('text')
-        .attr('transform', d => `translate(${arcLabel.centroid(d)})`)
-        .attr('text-anchor', 'middle').attr('fill', labelFill).attr('font-size', 13).attr('font-weight', 700)
-        .text(d => `${d.data.subscriber_share_pct || d.data.share_pct}%`)
-        .style('opacity', 0).transition().delay(400).style('opacity', 1);
+    arcs.filter(d => (d.endAngle - d.startAngle) > 0.08).each(function(d) {
+        const midAngle = (d.startAngle + d.endAngle) / 2;
+        const innerX = Math.sin(midAngle) * radius;
+        const innerY = -Math.cos(midAngle) * radius;
+        const outerX = Math.sin(midAngle) * labelRadius;
+        const outerY = -Math.cos(midAngle) * labelRadius;
+        const anchor = outerX > 0 ? 'start' : 'end';
+        const textX = outerX > 0 ? outerX + 6 : outerX - 6;
+        const g = d3.select(this);
+        g.append('line').attr('x1', innerX).attr('y1', innerY).attr('x2', outerX).attr('y2', outerY)
+            .attr('stroke', isLight ? '#64748b' : 'rgba(255,255,255,0.5)').attr('stroke-width', 1);
+        g.append('text').attr('transform', `translate(${textX},${outerY})`)
+            .attr('text-anchor', anchor).attr('dominant-baseline', 'middle')
+            .attr('fill', labelFill).attr('font-size', 13).attr('font-weight', 600)
+            .text(`${d.data.operator}: ${d.data.subscriberShare.toFixed(1)}%`)
+            .style('opacity', 0).transition().delay(400).style('opacity', 1);
+    });
 
     // Center label: total subscribers (data-first: prominent values)
-    const isIndia = data.country === 'India' || (window.__country === 'india' || window.__country === 'india-option-b');
-    const totalSubs = data.market_share.reduce((s, d) => s + (d.subscriber_share_pct || d.share_pct || 0), 0);
-    const totalSubsCr = data.market_share.reduce((s, d) => s + (d.subscribers_cr || 0), 0);
-    const centerLabel = isIndia && totalSubsCr > 0 ? `~${Math.round(totalSubsCr)} Cr` : '~333M';
+    const totalSubsCr = chartData.reduce((s, d) => s + (d.subscribersCr || 0), 0);
+    const centerLabel = isIndia && totalSubsCr > 0 ? `~${totalSubsCr.toFixed(1)} Cr` : '~333M';
     svg.append('text').attr('text-anchor', 'middle').attr('dy', '-0.3em')
         .attr('fill', labelFill).attr('font-size', 22).attr('font-weight', 700)
         .text(centerLabel);
@@ -150,12 +176,71 @@ async function renderMarketSharePie(containerId, data) {
         .attr('fill', isLight ? '#64748b' : 'rgba(255,255,255,0.85)').attr('font-size', 13)
         .text('Total Subscribers');
 
-    // Legend with insights
-    const opKey = d => d.carrier || d.operator;
-    const legend = container.append('div').attr('class', 'chart-legend').style('margin-top', '16px').style('display', 'flex').style('flex-wrap', 'wrap').style('gap', '12px 20px');
-    data.market_share.forEach(d => {
-        legend.append('div').style('font-size', '12px').style('line-height', '1.4')
-            .html(`<span style="display:inline-block;width:14px;height:14px;background:${color(opKey(d))};margin-right:6px;border-radius:3px;vertical-align:middle"></span><strong>${opKey(d)}</strong>: ${d.insight || ''}`);
+    // Legend with operator insights.
+    const legend = container.append('div').attr('class', 'chart-legend').style('margin-top', '14px').style('display', 'flex').style('flex-wrap', 'wrap').style('gap', '10px 24px');
+    chartData.forEach(d => {
+        legend.append('div').style('font-size', '12px').style('line-height', '1.5')
+            .html(`<span style="display:inline-block;width:12px;height:12px;background:${color(d.operator)};margin-right:8px;border-radius:3px;vertical-align:middle"></span><strong>${d.operator}</strong>: ${d.insight}`);
+    });
+
+    // Table below donut with percentage caption and relative-size bars.
+    const tableWrap = container.append('div').style('margin-top', '16px').style('overflow-x', 'auto');
+    const table = tableWrap.append('table')
+        .style('width', '100%')
+        .style('min-width', '560px')
+        .style('border-collapse', 'collapse')
+        .style('font-size', '12px')
+        .style('border', isLight ? '1px solid #cbd5e1' : '1px solid rgba(255,255,255,0.2)')
+        .style('border-radius', '8px')
+        .style('overflow', 'hidden');
+
+    table.append('caption')
+        .style('caption-side', 'top')
+        .style('text-align', 'left')
+        .style('font-size', '12px')
+        .style('font-weight', '600')
+        .style('padding', '6px 2px 8px')
+        .style('color', isLight ? '#334155' : '#e2e8f0')
+        .text('Market share table (% share)');
+
+    const headerBg = isLight ? '#f8fafc' : 'rgba(255,255,255,0.08)';
+    const rowBorder = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.15)';
+    const textColor = isLight ? '#1e293b' : '#e2e8f0';
+    const subTextColor = isLight ? '#475569' : '#cbd5e1';
+
+    const thead = table.append('thead').append('tr').style('background', headerBg);
+    ['Operator', 'Subscriber % share', 'Revenue % share', 'Relative size'].forEach(h => {
+        thead.append('th')
+            .style('padding', '8px 10px')
+            .style('text-align', 'left')
+            .style('border-bottom', `1px solid ${rowBorder}`)
+            .style('color', textColor)
+            .text(h);
+    });
+
+    const rows = table.append('tbody').selectAll('tr').data(chartData).join('tr');
+    rows.each(function(d, i) {
+        const tr = d3.select(this);
+        tr.style('border-bottom', i === chartData.length - 1 ? 'none' : `1px solid ${rowBorder}`);
+
+        tr.append('td').style('padding', '8px 10px').style('color', textColor)
+            .html(`<span style="display:inline-block;width:10px;height:10px;background:${color(d.operator)};border-radius:2px;margin-right:6px;vertical-align:middle"></span><strong>${d.operator}</strong>`);
+
+        tr.append('td').style('padding', '8px 10px').style('color', textColor)
+            .text(`${d.subscriberShare.toFixed(1)}%`);
+
+        tr.append('td').style('padding', '8px 10px').style('color', textColor)
+            .text(d.revenueShare > 0 ? `${d.revenueShare.toFixed(1)}%` : '-');
+
+        const barCell = tr.append('td').style('padding', '8px 10px');
+        const barWrapRow = barCell.append('div').style('display', 'flex').style('align-items', 'center').style('gap', '8px');
+        barWrapRow.append('div')
+            .style('width', `${Math.max(20, Math.round(d.subscriberShare * 2.2))}px`)
+            .style('height', '10px')
+            .style('border-radius', '999px')
+            .style('background', color(d.operator))
+            .style('opacity', '0.9');
+        barWrapRow.append('span').style('color', subTextColor).text(`${d.subscriberShare.toFixed(1)}%`);
     });
 }
 
@@ -224,8 +309,6 @@ async function renderMetrosBar(containerId, data) {
             .attr('width', d => x(d[1]) - x(d[0]));
     });
 
-    const isLight = document.body.classList.contains('theme-light');
-    const labelFill = isLight ? '#1e293b' : '#fff';
     const minSegment = isIndia ? 0.5 : 1.5;
     stacked.forEach((layer, i) => {
         const key = keys[i];
@@ -234,7 +317,7 @@ async function renderMetrosBar(containerId, data) {
             .attr('x', d => x(d[0]) + (x(d[1]) - x(d[0])) / 2)
             .attr('y', d => y(d.data.metro) + y.bandwidth() / 2)
             .attr('dy', '0.35em').attr('text-anchor', 'middle')
-            .attr('fill', labelFill).attr('font-size', 10).attr('font-weight', 600)
+            .attr('fill', '#fff').attr('font-size', 10).attr('font-weight', 600)
             .text(d => d.data[key] >= 0.5 ? d.data[key].toFixed(1) : '')
             .style('opacity', 0).transition().delay(500).style('opacity', 1);
     });
@@ -370,16 +453,22 @@ async function renderRevenueBar(containerId, data) {
 
     const isIndia = data.country === 'India' || (window.__country === 'india' || window.__country === 'india-option-b');
     const states = data.revenue_top10;
+    if (states.length > 15) {
+        container.style('max-height', '420px').style('overflow-y', 'auto');
+    } else {
+        container.style('max-height', null).style('overflow-y', null);
+    }
     const count = states.length;
     const subtitleEl = document.getElementById('revenue-subtitle');
-    if (subtitleEl) subtitleEl.textContent = count < 51 ? `(Top ${count} States)` : '(All States)';
+    if (subtitleEl) subtitleEl.textContent = count > 15 ? '(All States)' : `(Top ${count} States)`;
 
     const valueKey = isIndia ? 'annual_revenue_b' : 'annual_revenue_b';
     const maxVal = d3.max(states, d => d.annual_revenue_b) * 1.05;
 
     const margin = { top: 20, right: 90, bottom: 30, left: 100 };
     const width = 700 - margin.left - margin.right;
-    const height = 380 - margin.top - margin.bottom;
+    const bandHeight = 24;
+    const height = Math.min(380 - margin.top - margin.bottom, Math.max(200, count * bandHeight));
 
     const svg = container.append('svg').attr('width', width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom)
         .append('g').attr('transform', `translate(${margin.left},${margin.top})`);
@@ -409,11 +498,14 @@ async function renderRevenueBar(containerId, data) {
     const isLight = document.body.classList.contains('theme-light');
     const barLabelFill = isLight ? '#1e293b' : '#fff';
     const formatLabel = isIndia
-        ? d => `₹${Math.round((d.revenue_inr_cr != null ? d.revenue_inr_cr : d.annual_revenue_b * 1000) / 1000)}K Cr`
+        ? d => {
+            const v = d.revenue_inr_cr != null ? d.revenue_inr_cr : d.annual_revenue_b * 1000;
+            return v >= 1000 ? `₹${Math.round(v / 1000)}K Cr` : `₹${Math.round(v)} Cr`;
+        }
         : d => `$${d.annual_revenue_b}B`;
     svg.selectAll('.bar-label').data(states).join('text').attr('class', 'bar-label')
         .attr('x', d => x(d.annual_revenue_b) + 6).attr('y', d => y(d.state) + y.bandwidth() / 2)
-        .attr('dy', '0.35em').attr('fill', barLabelFill).attr('font-size', 13).attr('font-weight', 700)
+        .attr('dy', '0.35em').attr('fill', '#fff').attr('font-size', 12).attr('font-weight', 700)
         .text(formatLabel)
         .style('opacity', 0).transition().delay(550).style('opacity', 1);
 
