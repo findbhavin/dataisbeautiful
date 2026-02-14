@@ -51,6 +51,9 @@ class MapVisualizer {
         this.DC_MODE_STROKE_WIDTH = 1.1;  // Stronger borders for Data Centers / Hub Pairs
         this.INDIA_DC_TIERS_STROKE_WIDTH = 0.2;  // Extra-thin for India DC tiers map
         this.DC_MODE_STROKE_COLOR = '#0f172a';  // Darker stroke for DC modes
+        this.DC_MARKER_STROKE_WIDTH = 0.9;  // Thinner marker borders for elegant look
+        this.DC_MARKER_STROKE_COLOR = 'rgba(15, 23, 42, 0.72)';
+        this.DC_LOCATION_LABEL_SIZE = 9.2;
         this.STATE_FILL_OPACITY = 0.9;  // Slightly higher opacity for better color saturation
 
         // India map tuning: lighter internal boundaries, slightly smaller labels.
@@ -187,6 +190,9 @@ class MapVisualizer {
                 this.g.selectAll('.state-label')
                     .style('font-size', `${this.BASE_LABEL_FONT_SIZE / Math.sqrt(scale)}px`)
                     .style('opacity', scale < 2 ? 1 : 0.8);
+                this.g.selectAll('.dc-tier-location-label')
+                    .style('font-size', `${this.DC_LOCATION_LABEL_SIZE / Math.sqrt(scale)}px`)
+                    .style('opacity', scale < 2 ? 0.96 : 0.85);
             });
         
         this.svg.call(this.zoom);
@@ -479,7 +485,13 @@ class MapVisualizer {
         
         this.g.selectAll('.state-label').remove();
         
-        if (this.mapMode === 'dc-tiers' || this.mapMode === 'hub-pairs' || this.mapMode === 'data-centers') {
+        if (this.mapMode === 'dc-tiers') {
+            // India DC tiers: avoid clutter from state-name labels, emphasize center locations instead.
+            if (this.country === 'india' || this.country === 'india-option-b') return;
+            this.renderStateNameLabels();
+            return;
+        }
+        if (this.mapMode === 'hub-pairs' || this.mapMode === 'data-centers') {
             this.renderStateNameLabels();
             return;
         }
@@ -684,14 +696,19 @@ class MapVisualizer {
         this.clearStateCentroidDots();
         if (!this.statesFeatures) return;
         const layer = this.g.append('g').attr('class', 'state-centroid-dots');
-        const tierColors = { tier1: '#084081', tier2: '#0d9488', tier3: '#ea580c' };
-        const shapeSize = 6;
-        const offsetStep = 10;
-        const fillOpacity = 0.6;
+        const tierColors = { tier1: '#0f4c81', tier2: '#0f766e', tier3: '#ea580c' };
+        const isIndia = this.country === 'india' || this.country === 'india-option-b';
+        const shapeSize = 5.4;
+        const offsetStep = 8.6;
+        const fillOpacity = 0.56;
+        const markerStrokeWidth = this.DC_MARKER_STROKE_WIDTH;
+        const markerStrokeColor = this.DC_MARKER_STROKE_COLOR;
+        const labelLayer = (this.mapMode === 'dc-tiers' && isIndia) ? layer.append('g').attr('class', 'dc-tier-label-layer') : null;
+
         this.statesFeatures.forEach(d => {
             if (this.mapMode === 'data-centers') {
                 const stateValues = window.__dataCentersStateValues || {};
-                const key = (this.country === 'india' || this.country === 'india-option-b') ? (d.properties?.NAME_1 || d.properties?.name || d.properties?.st_nm || '') : (() => {
+                const key = isIndia ? (d.properties?.NAME_1 || d.properties?.name || d.properties?.st_nm || '') : (() => {
                     const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
                     return fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
                 })();
@@ -704,7 +721,10 @@ class MapVisualizer {
                 if (!projected) return;
                 const color = /super\s*core/i.test(value) ? '#084081' : '#0868ac';
                 layer.append('circle').attr('cx', projected[0]).attr('cy', projected[1]).attr('r', shapeSize)
-                    .attr('fill', color).attr('fill-opacity', 0.6).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
+                    .attr('fill', color).attr('fill-opacity', fillOpacity)
+                    .attr('stroke', markerStrokeColor).attr('stroke-width', markerStrokeWidth)
+                    .style('filter', 'drop-shadow(0 1px 1px rgba(15,23,42,0.16))')
+                    .style('pointer-events', 'none');
                 return;
             }
             const activeTiers = this.getActiveTiersForState(d);
@@ -722,19 +742,67 @@ class MapVisualizer {
                 const color = tierColors[tier] || '#ea580c';
                 if (tier === 'tier1') {
                     layer.append('circle').attr('cx', x).attr('cy', cy).attr('r', shapeSize)
-                        .attr('fill', color).attr('fill-opacity', fillOpacity).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
+                        .attr('fill', color).attr('fill-opacity', fillOpacity).attr('stroke', markerStrokeColor).attr('stroke-width', markerStrokeWidth)
+                        .style('filter', 'drop-shadow(0 1px 1px rgba(15,23,42,0.16))')
+                        .style('pointer-events', 'none');
                 } else if (tier === 'tier2') {
                     const s = shapeSize * 1.2;
                     layer.append('rect').attr('x', x - s).attr('y', cy - s).attr('width', s * 2).attr('height', s * 2)
-                        .attr('fill', color).attr('fill-opacity', fillOpacity).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
+                        .attr('fill', color).attr('fill-opacity', fillOpacity).attr('stroke', markerStrokeColor).attr('stroke-width', markerStrokeWidth)
+                        .style('filter', 'drop-shadow(0 1px 1px rgba(15,23,42,0.16))')
+                        .style('pointer-events', 'none');
                 } else {
                     const r = shapeSize * 1.3;
                     const path = `M ${x} ${cy - r} L ${x + r} ${cy + r} L ${x - r} ${cy + r} Z`;
                     layer.append('path').attr('d', path)
-                        .attr('fill', color).attr('fill-opacity', fillOpacity).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
+                        .attr('fill', color).attr('fill-opacity', fillOpacity).attr('stroke', markerStrokeColor).attr('stroke-width', markerStrokeWidth)
+                        .style('filter', 'drop-shadow(0 1px 1px rgba(15,23,42,0.16))')
+                        .style('pointer-events', 'none');
                 }
             });
+
+            // India DC tiers: highlight center location names (major tiers) with stronger labels.
+            if (labelLayer && (activeTiers.includes('tier1') || activeTiers.includes('tier2'))) {
+                const stateKey = this.getFeatureStateKey(d);
+                const locationLabel = this.getDcTierLocationLabel(stateKey, activeTiers);
+                if (locationLabel) {
+                    const isTier1 = activeTiers.includes('tier1');
+                    const labelX = cx + (isTier1 ? 10 : 8);
+                    const labelY = cy - (isTier1 ? 10 : 8);
+                    labelLayer.append('text')
+                        .attr('class', 'dc-tier-location-label')
+                        .attr('x', labelX)
+                        .attr('y', labelY)
+                        .attr('text-anchor', 'start')
+                        .attr('dominant-baseline', 'middle')
+                        .style('font-size', `${this.DC_LOCATION_LABEL_SIZE}px`)
+                        .style('font-weight', isTier1 ? 700 : 600)
+                        .style('fill', isTier1 ? '#1e3a8a' : '#0f172a')
+                        .style('stroke', '#ffffff')
+                        .style('stroke-width', '1.2px')
+                        .style('paint-order', 'stroke')
+                        .style('pointer-events', 'none')
+                        .text(locationLabel);
+                }
+            }
         });
+    }
+
+    getFeatureStateKey(d) {
+        if (this.country === 'india' || this.country === 'india-option-b') {
+            return d.properties?.NAME_1 || d.properties?.name || d.properties?.st_nm || '';
+        }
+        const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
+        return fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
+    }
+
+    getDcTierLocationLabel(stateKey, activeTiers = []) {
+        const labelsByState = window.__dataCenterTierCityLabels || {};
+        const labels = labelsByState[stateKey] || {};
+        // Prefer higher tier name for concise, elegant labeling.
+        const priority = ['tier1', 'tier2', 'tier3'];
+        const tier = priority.find(t => activeTiers.includes(t) && labels[t]);
+        return tier ? labels[tier] : '';
     }
     
     getActiveTiersForState(d) {
@@ -830,16 +898,21 @@ class MapVisualizer {
             return;
         }
         if (this.mapMode === 'dc-tiers') {
-            const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
-            const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
-            const stateName = (this.data?.by_state?.find(s => s.state_iso === iso)?.state_name) || (d.properties?.name) || iso || 'Unknown';
+            const key = this.getFeatureStateKey(d);
+            const isIndia = this.country === 'india' || this.country === 'india-option-b';
+            const stateName = isIndia
+                ? (d.properties?.NAME_1 || d.properties?.name || d.properties?.st_nm || key || 'Unknown')
+                : ((this.data?.by_state?.find(s => s.state_iso === key)?.state_name) || (d.properties?.name) || key || 'Unknown');
             const tiers = window.__dataCenterTiers || { tier1: new Set(), tier2: new Set(), tier3: new Set() };
             const labels = [];
-            if (tiers.tier1?.has(iso)) labels.push('Tier 1 - Super Core');
-            if (tiers.tier2?.has(iso)) labels.push('Tier 2 - Regional');
-            if (tiers.tier3?.has(iso)) labels.push('Tier 3 - Edge');
+            const active = [];
+            if (tiers.tier1?.has(key)) { labels.push('Tier 1 - Super Core'); active.push('tier1'); }
+            if (tiers.tier2?.has(key)) { labels.push('Tier 2 - Regional'); active.push('tier2'); }
+            if (tiers.tier3?.has(key)) { labels.push('Tier 3 - Edge'); active.push('tier3'); }
             const tierStr = labels.length ? labels.join(', ') : 'No data center';
-            this.tooltip.style('opacity', 1).html(`<div class="tooltip-title">${stateName}</div><div class="tooltip-content">${tierStr}</div>`);
+            const location = this.getDcTierLocationLabel(key, active);
+            const locationHtml = location ? `<div class="tooltip-content"><strong>Center:</strong> ${location}</div>` : '';
+            this.tooltip.style('opacity', 1).html(`<div class="tooltip-title">${stateName}</div><div class="tooltip-content">${tierStr}</div>${locationHtml}`);
             return;
         }
         if (this.mapMode === 'hub-pairs') {
