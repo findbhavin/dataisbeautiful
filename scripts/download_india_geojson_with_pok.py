@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
-Download India state GeoJSON and add POK (Pakistan-occupied Kashmir).
-Uses a Ladakh-inclusive base source and datameet/maps for POK polygons.
+Download India state GeoJSON with POK (Pakistan-occupied Kashmir) and Ladakh.
+- Primary: Highsoft in-all (includes Ladakh post-2019, Jammu & Kashmir)
+- POK: datameet/maps disputed polygons (Azad Kashmir, Gilgit-Baltistan)
+- Alternative: udit-001/india-maps-data has state-level Ladakh, J&K (see geo router)
 """
 import urllib.request
 import json

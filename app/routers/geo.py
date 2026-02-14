@@ -9,8 +9,11 @@ import json
 from typing import Dict, Any
 
 router = APIRouter(prefix="/api/geo", tags=["geo"])
+# Primary: Highsoft in-all includes Ladakh (post-2019). POK merged from datameet.
 INDIA_GEOJSON_PRIMARY_URL = "https://code.highcharts.com/mapdata/countries/in/in-all.geo.json"
+# Fallback: Subhash9325 (may lack Ladakh). udit-001 has district-level with Ladakh, J&K.
 INDIA_GEOJSON_FALLBACK_URL = "https://raw.githubusercontent.com/Subhash9325/GeoJson-Data-of-Indian-States/master/Indian_States"
+INDIA_GEOJSON_UDIT001_URL = "https://raw.githubusercontent.com/udit-001/india-maps-data/main/geojson/india.geojson"
 
 
 @router.get("/topojson/states")
@@ -149,19 +152,35 @@ async def get_india_city_coordinates() -> Dict[str, Any]:
 def _normalize_india_feature_names(data: dict) -> dict:
     """
     Normalize state/UT names to a consistent schema used by frontend/data lookups.
+    Handles both state-level (NAME_1/name) and district-level (st_nm) sources e.g. udit-001.
     """
     alias_map = {
         "Andaman and Nicobar Islands": "Andaman and Nicobar",
+        "Dadra & Nagar Haveli and Daman & Diu": "Dadra and Nagar Haveli and Daman and Diu",
     }
     for feature in data.get("features", []):
         props = feature.setdefault("properties", {})
-        raw_name = props.get("NAME_1") or props.get("name")
+        raw_name = props.get("NAME_1") or props.get("name") or props.get("st_nm")
         if not raw_name:
             continue
         canonical = alias_map.get(raw_name, raw_name)
         props["NAME_1"] = canonical
         props["name"] = canonical
     return data
+
+
+def _convert_udit001_district_to_state(data: dict) -> dict:
+    """
+    Convert udit-001 district-level GeoJSON to state-level schema.
+    Uses st_nm as NAME_1 so frontend can match. Districts render as separate polygons.
+    """
+    for feature in data.get("features", []):
+        props = feature.setdefault("properties", {})
+        st_nm = props.get("st_nm")
+        if st_nm:
+            props["NAME_1"] = st_nm
+            props["name"] = st_nm
+    return _normalize_india_feature_names(data)
 
 
 def _merge_pok_into_india(data: dict) -> dict:
@@ -222,13 +241,18 @@ async def get_india_states_geojson() -> Dict[str, Any]:
     except Exception:
         pass
 
-    # 2) CDN fallbacks (primary includes Ladakh; secondary kept for resilience)
+    # 2) CDN fallbacks: Highsoft (Ladakh), Subhash9325, udit-001 (district-level, has Ladakh+J&K)
     last_error = None
-    for url in [INDIA_GEOJSON_PRIMARY_URL, INDIA_GEOJSON_FALLBACK_URL]:
+    sources = [
+        (INDIA_GEOJSON_PRIMARY_URL, lambda d: _normalize_india_feature_names(d)),
+        (INDIA_GEOJSON_FALLBACK_URL, lambda d: _normalize_india_feature_names(d)),
+        (INDIA_GEOJSON_UDIT001_URL, _convert_udit001_district_to_state),
+    ]
+    for url, normalize_fn in sources:
         try:
-            with urllib.request.urlopen(url, timeout=10) as r:
+            with urllib.request.urlopen(url, timeout=15) as r:
                 data = json.loads(r.read().decode())
-            data = _normalize_india_feature_names(data)
+            data = normalize_fn(data)
             data = _merge_pok_into_india(data)
             if data.get('features'):
                 return data

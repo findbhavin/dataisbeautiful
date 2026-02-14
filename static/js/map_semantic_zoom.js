@@ -277,12 +277,26 @@ class MapVisualizer {
                 return;
             }
 
-            // India: fit loaded geometry to SVG viewport (avoids hardcoded scale on different screen sizes).
+            // India: use fixed bounds (India + POK + Ladakh) - fitExtent on merged GeoJSON can produce
+            // invalid scale when POK/datameet geometry has structure D3 misinterprets. Fixed bounds
+            // ensure reliable projection regardless of source geometry.
             if (this.country === 'india') {
-                this.projection.fitExtent(
-                    [[20, 20], [this.width - 20, this.height - 20]],
-                    states
-                );
+                const pad = 20;
+                const extent = [[pad, pad], [this.width - pad, this.height - pad]];
+                const indiaBounds = { type: 'Feature', geometry: {
+                    type: 'Polygon',
+                    coordinates: [[[68, 6], [97, 6], [97, 38], [68, 38], [68, 6]]]
+                }};
+                try {
+                    this.projection.fitExtent(extent, indiaBounds);
+                    const s = this.projection.scale();
+                    if (typeof s !== 'number' || !isFinite(s) || s <= 0 || s > 1e6) {
+                        throw new Error('Invalid scale from fitExtent');
+                    }
+                } catch (e) {
+                    this.debugLog('India fitExtent fallback:', e.message);
+                    this.projection.scale(1100).center([78, 22]).translate([this.width / 2, this.height / 2]);
+                }
                 this.path = d3.geoPath().projection(this.projection);
             }
             
