@@ -139,19 +139,23 @@ async function renderMarketSharePie(containerId, data) {
         .style('opacity', 0).transition().delay(400).style('opacity', 1);
 
     // Center label: total subscribers (data-first: prominent values)
+    const isIndia = data.country === 'India' || window.__country === 'india';
     const totalSubs = data.market_share.reduce((s, d) => s + (d.subscriber_share_pct || d.share_pct || 0), 0);
+    const totalSubsCr = data.market_share.reduce((s, d) => s + (d.subscribers_cr || 0), 0);
+    const centerLabel = isIndia && totalSubsCr > 0 ? `~${Math.round(totalSubsCr)} Cr` : '~333M';
     svg.append('text').attr('text-anchor', 'middle').attr('dy', '-0.3em')
         .attr('fill', labelFill).attr('font-size', 22).attr('font-weight', 700)
-        .text('~333M');
+        .text(centerLabel);
     svg.append('text').attr('text-anchor', 'middle').attr('dy', '0.9em')
         .attr('fill', isLight ? '#64748b' : 'rgba(255,255,255,0.85)').attr('font-size', 13)
         .text('Total Subscribers');
 
     // Legend with insights
+    const opKey = d => d.carrier || d.operator;
     const legend = container.append('div').attr('class', 'chart-legend').style('margin-top', '16px').style('display', 'flex').style('flex-wrap', 'wrap').style('gap', '12px 20px');
     data.market_share.forEach(d => {
         legend.append('div').style('font-size', '12px').style('line-height', '1.4')
-            .html(`<span style="display:inline-block;width:14px;height:14px;background:${color(d.carrier)};margin-right:6px;border-radius:3px;vertical-align:middle"></span><strong>${d.carrier}</strong>: ${d.insight}`);
+            .html(`<span style="display:inline-block;width:14px;height:14px;background:${color(opKey(d))};margin-right:6px;border-radius:3px;vertical-align:middle"></span><strong>${opKey(d)}</strong>: ${d.insight || ''}`);
     });
 }
 
@@ -165,7 +169,24 @@ async function renderMetrosBar(containerId, data) {
     }
     if (!ensureContainerVisible(containerId)) return;
 
-    // Single stacked bar per metro: multicolor segments for each carrier
+    const isIndia = data.country === 'India' || window.__country === 'india';
+    let metros = data.top10_metros;
+    if (isIndia && metros[0] && !metros[0].jio && metros[0].subscribers_cr != null) {
+        const shares = { jio: 0.385, airtel: 0.321, vi: 0.189, bsnl: 0.082, others: 0.023 };
+        metros = metros.map(d => {
+            const t = d.subscribers_cr || 0;
+            return { metro: d.metro, total: t, jio: t * shares.jio, airtel: t * shares.airtel, vi: t * shares.vi, bsnl: t * shares.bsnl, others: t * shares.others };
+        });
+    }
+
+    const keys = isIndia ? ['jio', 'airtel', 'vi', 'bsnl', 'others'] : ['verizon', 'tmobile', 'att', 'others'];
+    const colors = isIndia
+        ? { jio: ChartColors.jio, airtel: ChartColors.airtel, vi: ChartColors.vi, bsnl: ChartColors.bsnl, others: ChartColors.others }
+        : { verizon: ChartColors.verizon, tmobile: ChartColors.tmobile, att: ChartColors.att, others: ChartColors.others };
+    const labels = isIndia
+        ? { jio: 'Jio', airtel: 'Airtel', vi: 'Vi', bsnl: 'BSNL', others: 'Others' }
+        : { verizon: 'Verizon', tmobile: 'T-Mobile', att: 'AT&T', others: 'Others (carriers)' };
+
     const margin = { top: 20, right: 80, bottom: 40, left: 120 };
     const width = 800 - margin.left - margin.right;
     const height = 420 - margin.top - margin.bottom;
@@ -173,12 +194,7 @@ async function renderMetrosBar(containerId, data) {
     const svg = container.append('svg').attr('width', width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom)
         .append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
-    const metros = data.top10_metros;
-    const keys = ['verizon', 'tmobile', 'att', 'others'];
-    const colors = { verizon: ChartColors.verizon, tmobile: ChartColors.tmobile, att: ChartColors.att, others: ChartColors.others };
-    const labels = { verizon: 'Verizon', tmobile: 'T-Mobile', att: 'AT&T', others: 'Others (carriers)' };
-
-    const maxTotal = d3.max(metros, d => d.total) * 1.05;
+    const maxTotal = d3.max(metros, d => d.total || 0) * 1.05;
     const x = d3.scaleLinear().domain([0, maxTotal]).range([0, width]);
     const y = d3.scaleBand().domain(metros.map(d => d.metro)).range([0, height]).padding(0.5);
 
@@ -197,7 +213,8 @@ async function renderMetrosBar(containerId, data) {
             .style('cursor', 'pointer')
             .on('mouseover', function(event, d) {
                 d3.select(this).attr('opacity', 0.9);
-                showTooltip(event, `<strong>${d.data.metro}</strong> – ${labels[key]}<br>${d.data[key].toFixed(1)}M subscribers`);
+                const unit = isIndia ? ' Cr' : 'M';
+                showTooltip(event, `<strong>${d.data.metro}</strong> – ${labels[key]}<br>${d.data[key].toFixed(1)}${unit} subscribers`);
             })
             .on('mouseout', function() {
                 d3.select(this).attr('opacity', 1);
@@ -209,9 +226,10 @@ async function renderMetrosBar(containerId, data) {
 
     const isLight = document.body.classList.contains('theme-light');
     const labelFill = isLight ? '#1e293b' : '#fff';
+    const minSegment = isIndia ? 0.5 : 1.5;
     stacked.forEach((layer, i) => {
         const key = keys[i];
-        svg.selectAll(`text.metro-${key}`).data(layer.filter(d => (d[1] - d[0]) > 1.5)).join('text')
+        svg.selectAll(`text.metro-${key}`).data(layer.filter(d => (d[1] - d[0]) > minSegment)).join('text')
             .attr('class', `metro-${key}`)
             .attr('x', d => x(d[0]) + (x(d[1]) - x(d[0])) / 2)
             .attr('y', d => y(d.data.metro) + y.bandwidth() / 2)
@@ -221,7 +239,8 @@ async function renderMetrosBar(containerId, data) {
             .style('opacity', 0).transition().delay(500).style('opacity', 1);
     });
 
-    svg.append('g').attr('transform', `translate(0,${height})`).attr('font-size', 13).call(d3.axisBottom(x).ticks(5).tickFormat(d => d + 'M'));
+    const xAxisFormat = isIndia ? d => d + ' Cr' : d => d + 'M';
+    svg.append('g').attr('transform', `translate(0,${height})`).attr('font-size', 13).call(d3.axisBottom(x).ticks(5).tickFormat(xAxisFormat));
     svg.append('g').attr('font-size', 13).call(d3.axisLeft(y).tickSize(0));
 
     const legend = container.append('div').attr('class', 'chart-legend').style('margin-top', '12px').style('font-size', '13px');
@@ -231,15 +250,61 @@ async function renderMetrosBar(containerId, data) {
     });
 }
 
+async function renderSpectrumBarIndia(containerId, data) {
+    const container = d3.select(`#${containerId}`);
+    const bands = data.spectrum_by_state || [];
+    const margin = { top: 24, right: 90, bottom: 40, left: 120 };
+    const width = 720 - margin.left - margin.right;
+    const height = Math.min(400, bands.length * 32);
+
+    const svg = container.append('svg').attr('width', width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom)
+        .append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+    const y = d3.scaleBand().domain(bands.map(d => d.state)).range([0, height]).padding(0.2);
+    const x = d3.scaleLinear().domain([0, d3.max(bands, d => d.spectrum_mhz) * 1.05]).range([0, width]);
+    const isLight = document.body.classList.contains('theme-light');
+    const labelFill = isLight ? '#1e293b' : '#fff';
+
+    bands.forEach((d, i) => {
+        const g = svg.append('g').attr('transform', `translate(0,${y(d.state)})`);
+        g.append('rect').attr('x', 0).attr('y', 2).attr('height', y.bandwidth() - 4)
+            .attr('width', 0).attr('fill', ChartColors.neutral[2]).attr('rx', 3)
+            .style('cursor', 'pointer')
+            .on('mouseover', function(event) {
+                d3.select(this).attr('opacity', 0.9);
+                showTooltip(event, `<strong>${d.state}</strong><br>Spectrum: ${d.spectrum_mhz} MHz<br>Cost: ₹${d.cost_cr} Cr`);
+            })
+            .on('mouseout', function() {
+                d3.select(this).attr('opacity', 1);
+                hideTooltip();
+            })
+            .transition().duration(400).delay(i * 40).attr('width', x(d.spectrum_mhz));
+        g.append('text').attr('x', x(d.spectrum_mhz) + 6).attr('y', y.bandwidth() / 2).attr('dy', '0.35em')
+            .attr('fill', labelFill).attr('font-size', 11).attr('font-weight', 600)
+            .text(d.spectrum_mhz + ' MHz')
+            .style('opacity', 0).transition().delay(450 + i * 40).style('opacity', 1);
+    });
+
+    svg.append('g').attr('font-size', 12).call(d3.axisLeft(y).tickSize(0));
+    svg.append('g').attr('transform', `translate(0,${height})`).attr('font-size', 11).call(d3.axisBottom(x).ticks(5).tickFormat(d => d + ' MHz'));
+}
+
 async function renderSpectrumBar(containerId, data) {
     const container = d3.select(`#${containerId}`);
     if (container.empty()) return;
     container.selectAll('*').remove();
-    if (!data || !data.spectrum_depth_nationwide || !Array.isArray(data.spectrum_depth_nationwide) || data.spectrum_depth_nationwide.length === 0) {
+    const isIndia = data?.country === 'India' || window.__country === 'india';
+    const hasIndiaSpectrum = isIndia && data?.spectrum_by_state && Array.isArray(data.spectrum_by_state) && data.spectrum_by_state.length > 0;
+    const hasUSSpectrum = data?.spectrum_depth_nationwide && Array.isArray(data.spectrum_depth_nationwide) && data.spectrum_depth_nationwide.length > 0;
+    if (!hasIndiaSpectrum && !hasUSSpectrum) {
         container.append('p').attr('class', 'chart-error').text('No spectrum data available.');
         return;
     }
     if (!ensureContainerVisible(containerId)) return;
+
+    if (hasIndiaSpectrum) {
+        return renderSpectrumBarIndia(containerId, data);
+    }
 
     const margin = { top: 24, right: 30, bottom: 50, left: 55 };
     const width = 720 - margin.left - margin.right;
@@ -303,20 +368,23 @@ async function renderRevenueBar(containerId, data) {
     }
     if (!ensureContainerVisible(containerId)) return;
 
+    const isIndia = data.country === 'India' || window.__country === 'india';
     const states = data.revenue_top10;
     const count = states.length;
     const subtitleEl = document.getElementById('revenue-subtitle');
     if (subtitleEl) subtitleEl.textContent = count < 51 ? `(Top ${count} States)` : '(All States)';
 
-    // Horizontal bar: state names on left, values on right
-    const margin = { top: 20, right: 70, bottom: 30, left: 100 };
+    const valueKey = isIndia ? 'annual_revenue_b' : 'annual_revenue_b';
+    const maxVal = d3.max(states, d => d.annual_revenue_b) * 1.05;
+
+    const margin = { top: 20, right: 90, bottom: 30, left: 100 };
     const width = 700 - margin.left - margin.right;
     const height = 380 - margin.top - margin.bottom;
 
     const svg = container.append('svg').attr('width', width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom)
         .append('g').attr('transform', `translate(${margin.left},${margin.top})`);
     const y = d3.scaleBand().domain(states.map(d => d.state)).range([0, height]).padding(0.2);
-    const x = d3.scaleLinear().domain([0, d3.max(states, d => d.annual_revenue_b) * 1.05]).range([0, width]);
+    const x = d3.scaleLinear().domain([0, maxVal]).range([0, width]);
 
     const bars = svg.selectAll('rect').data(states).join('rect')
         .attr('y', d => y(d.state)).attr('height', y.bandwidth())
@@ -325,9 +393,12 @@ async function renderRevenueBar(containerId, data) {
         .style('cursor', 'pointer')
         .on('mouseover', function(event, d) {
             d3.select(this).attr('fill', ChartColors.neutral[1]);
-            showTooltip(event, `<strong>${d.state}</strong><br>Customers: ${d.customers_m}M<br>Annual revenue: $${d.annual_revenue_b}B`);
+            const tip = isIndia
+                ? `<strong>${d.state}</strong><br>Revenue: ₹${(d.revenue_inr_cr || d.annual_revenue_b * 1000).toLocaleString()} Cr${d.growth_pct != null ? `<br>Growth: ${d.growth_pct}%` : ''}`
+                : `<strong>${d.state}</strong><br>Customers: ${d.customers_m}M<br>Annual revenue: $${d.annual_revenue_b}B`;
+            showTooltip(event, tip);
         })
-        .on('mouseout', function(_, d) {
+        .on('mouseout', function() {
             d3.select(this).attr('fill', ChartColors.neutral[2]);
             hideTooltip();
         });
@@ -337,13 +408,17 @@ async function renderRevenueBar(containerId, data) {
 
     const isLight = document.body.classList.contains('theme-light');
     const barLabelFill = isLight ? '#1e293b' : '#fff';
+    const formatLabel = isIndia
+        ? d => `₹${Math.round((d.revenue_inr_cr != null ? d.revenue_inr_cr : d.annual_revenue_b * 1000) / 1000)}K Cr`
+        : d => `$${d.annual_revenue_b}B`;
     svg.selectAll('.bar-label').data(states).join('text').attr('class', 'bar-label')
         .attr('x', d => x(d.annual_revenue_b) + 6).attr('y', d => y(d.state) + y.bandwidth() / 2)
         .attr('dy', '0.35em').attr('fill', barLabelFill).attr('font-size', 13).attr('font-weight', 700)
-        .text(d => `$${d.annual_revenue_b}B`)
+        .text(formatLabel)
         .style('opacity', 0).transition().delay(550).style('opacity', 1);
 
-    svg.append('g').attr('transform', `translate(0,${height})`).attr('font-size', 13).call(d3.axisBottom(x).ticks(5).tickFormat(d => '$' + d + 'B'));
+    const xAxisFormat = isIndia ? d => `₹${d}K Cr` : d => '$' + d + 'B';
+    svg.append('g').attr('transform', `translate(0,${height})`).attr('font-size', 13).call(d3.axisBottom(x).ticks(5).tickFormat(xAxisFormat));
     svg.append('g').attr('font-size', 13).call(d3.axisLeft(y).tickSize(0));
 }
 
@@ -357,7 +432,8 @@ async function renderTopStatesBar(containerId, data, operatorKey) {
     }
     if (!ensureContainerVisible(containerId)) return;
 
-    const margin = { top: 20, right: 60, bottom: 30, left: 100 };
+    const isIndia = data.country === 'India' || window.__country === 'india';
+    const margin = { top: 20, right: 80, bottom: 30, left: 100 };
     const width = 700 - margin.left - margin.right;
     const height = 380 - margin.top - margin.bottom;
 
@@ -366,9 +442,9 @@ async function renderTopStatesBar(containerId, data, operatorKey) {
 
     let states;
     const valueKey = operatorKey === 'total' ? 'customers_m' : (operatorKey + '_total');
-    const valueLabel = operatorKey === 'total' ? 'customers' : operatorKey;
+    const valueLabel = operatorKey === 'total' ? (isIndia ? 'revenue (Cr)' : 'customers') : operatorKey;
 
-    if (operatorKey === 'total') {
+    if (operatorKey === 'total' || isIndia) {
         states = data.top10_states;
     } else {
         const mobileRes = await fetch('/api/mobile/data').then(r => r.json());
@@ -396,7 +472,10 @@ async function renderTopStatesBar(containerId, data, operatorKey) {
         .style('cursor', 'pointer')
         .on('mouseover', function(event, d) {
             d3.select(this).attr('opacity', 0.85);
-            showTooltip(event, `<strong>${d.state}</strong><br>${d.customers_m}M ${valueLabel} (${operatorKey === 'total' ? 'total' : operatorKey})`);
+            const tip = isIndia && d.revenue_inr_cr != null
+                ? `<strong>${d.state}</strong><br>Revenue: ₹${(d.revenue_inr_cr / 1000).toFixed(0)}K Cr`
+                : `<strong>${d.state}</strong><br>${d.customers_m}M ${valueLabel} (${operatorKey === 'total' ? 'total' : operatorKey})`;
+            showTooltip(event, tip);
         })
         .on('mouseout', function() {
             d3.select(this).attr('opacity', 1);
@@ -408,13 +487,17 @@ async function renderTopStatesBar(containerId, data, operatorKey) {
 
     const isLight = document.body.classList.contains('theme-light');
     const barLabelFill = isLight ? '#1e293b' : '#fff';
+    const barLabel = isIndia && states[0]?.revenue_inr_cr != null
+        ? d => `₹${Math.round((d.revenue_inr_cr || 0) / 1000)}K Cr`
+        : d => d.customers_m + 'M';
     svg.selectAll('.bar-label').data(states).join('text').attr('class', 'bar-label')
         .attr('x', d => x(d.customers_m) + 6).attr('y', d => y(d.state) + y.bandwidth() / 2)
         .attr('dy', '0.35em').attr('fill', barLabelFill).attr('font-size', 13).attr('font-weight', 700)
-        .text(d => d.customers_m + 'M')
+        .text(barLabel)
         .style('opacity', 0).transition().delay(550).style('opacity', 1);
 
-    svg.append('g').attr('transform', `translate(0,${height})`).attr('font-size', 13).call(d3.axisBottom(x).ticks(5).tickFormat(d => d + 'M'));
+    const xAxisFormat = isIndia && states[0]?.revenue_inr_cr != null ? d => `₹${d}K Cr` : d => d + 'M';
+    svg.append('g').attr('transform', `translate(0,${height})`).attr('font-size', 13).call(d3.axisBottom(x).ticks(5).tickFormat(xAxisFormat));
     svg.append('g').attr('font-size', 13).call(d3.axisLeft(y).tickSize(0));
 }
 
@@ -499,23 +582,43 @@ function parseTableInput() {
 }
 
 async function loadMarketShare() {
-    const data = await fetch('/api/analytics/market-wide').then(r => r.json());
+    const isIndia = window.__country === 'india';
+    const url = isIndia ? '/api/analytics/india/market-wide' : '/api/analytics/market-wide';
+    const data = await fetch(url).then(r => r.json());
     await renderMarketSharePie('chart-market-share', data);
 }
 async function loadMetros() {
-    const data = await fetch('/api/analytics/metros').then(r => r.json());
+    const isIndia = window.__country === 'india';
+    const url = isIndia ? '/api/analytics/india/metros' : '/api/analytics/metros';
+    const data = await fetch(url).then(r => r.json());
+    const h3 = document.querySelector('#tab-metros h3');
+    if (h3) h3.textContent = isIndia ? 'Top 10 Indian Metro Areas by Carrier (Crores)' : 'Top 10 US Metro Areas by Carrier (Millions)';
     await renderMetrosBar('chart-metros', data);
 }
 async function loadSpectrum() {
-    const data = await fetch('/api/analytics/spectrum').then(r => r.json());
+    const isIndia = window.__country === 'india';
+    const url = isIndia ? '/api/analytics/india/spectrum' : '/api/analytics/spectrum';
+    const data = await fetch(url).then(r => r.json());
+    const h3 = document.querySelector('#tab-spectrum h3');
+    if (h3) h3.textContent = isIndia ? 'Spectrum Holdings by State (India)' : 'Estimated Sub-6 GHz Spectrum Depth by Band (2026)';
     await renderSpectrumBar('chart-spectrum', data);
 }
 async function loadRevenue() {
-    const data = await fetch('/api/analytics/revenue-by-state').then(r => r.json());
+    const isIndia = window.__country === 'india';
+    const url = isIndia ? '/api/analytics/india/revenue-by-state' : '/api/analytics/revenue-by-state';
+    const data = await fetch(url).then(r => r.json());
+    const h3 = document.querySelector('#tab-revenue h3');
+    if (h3) h3.innerHTML = isIndia ? 'Wireless Revenue by State (INR Cr) <span id="revenue-subtitle" class="chart-subtitle"></span>' : 'Estimated 2025 Annual Wireless Service Revenue by State <span id="revenue-subtitle" class="chart-subtitle"></span>';
     await renderRevenueBar('chart-revenue', data);
 }
 async function loadTopStates() {
-    const data = await fetch('/api/analytics/market-wide').then(r => r.json());
-    const operatorKey = (document.getElementById('top-states-operator')?.value || 'total');
+    const isIndia = window.__country === 'india';
+    const url = isIndia ? '/api/analytics/india/market-wide' : '/api/analytics/market-wide';
+    const data = await fetch(url).then(r => r.json());
+    const h3 = document.querySelector('#tab-top-states h3');
+    if (h3) h3.textContent = isIndia ? 'Top 10 States by Revenue (INR Cr)' : 'Top 10 States by Customer Base';
+    const controlsEl = document.querySelector('#tab-top-states .chart-controls-inline');
+    if (controlsEl) controlsEl.style.display = isIndia ? 'none' : '';
+    const operatorKey = isIndia ? 'total' : (document.getElementById('top-states-operator')?.value || 'total');
     await renderTopStatesBar('chart-top-states', data, operatorKey);
 }
