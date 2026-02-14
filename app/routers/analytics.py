@@ -39,8 +39,31 @@ async def get_spectrum() -> Dict[str, Any]:
 
 @router.get("/revenue-by-state")
 async def get_revenue_by_state() -> Dict[str, Any]:
-    """Estimated wireless revenue by state."""
-    return _load_json("revenue_by_state.json")
+    """Estimated wireless revenue by state. Returns all states from mobile data (with merged revenue)."""
+    try:
+        from app.services.data_loader import load_mobile_subscribers_data
+        data = load_mobile_subscribers_data()
+        by_state = data.get("by_state", [])
+        rev = sorted(
+            [
+                {
+                    "state": d.get("state_name", ""),
+                    "annual_revenue_b": d.get("annual_revenue_b", 0),
+                    "customers_m": d.get("total_subscribers", 0),
+                }
+                for d in by_state
+                if d.get("state_iso") != "OTH" and d.get("state_name")
+            ],
+            key=lambda x: x["annual_revenue_b"],
+            reverse=True,
+        )
+        revenue_top10 = [
+            {"state": d["state"], "annual_revenue_b": d["annual_revenue_b"], "customers_m": d["customers_m"]}
+            for d in rev
+        ]
+        return {"revenue_top10": revenue_top10, "country": "US", "currency": "USD"}
+    except Exception:
+        return _load_json("revenue_by_state.json")
 
 
 @router.get("/city-coordinates")

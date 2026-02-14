@@ -96,8 +96,8 @@ async function renderMarketSharePie(containerId, data) {
     }
     if (!ensureContainerVisible(containerId)) return;
 
-    // Donut chart: center shows total; slices show subscriber share
-    const width = 420, height = 420, radius = Math.min(width, height) / 2 - 50;
+    // Donut chart: center shows total; slices show subscriber share (larger for label visibility)
+    const width = 580, height = 580, radius = Math.min(width, height) / 2 - 80;
     const innerRadius = radius * 0.55; // Donut hole
     const svg = container.append('svg').attr('width', width).attr('height', height)
         .append('g').attr('transform', `translate(${width/2},${height/2})`);
@@ -108,7 +108,7 @@ async function renderMarketSharePie(containerId, data) {
 
     const pie = d3.pie().value(d => d.subscriber_share_pct || d.share_pct).sort(null);
     const arc = d3.arc().innerRadius(innerRadius).outerRadius(radius).cornerRadius(4);
-    const labelRadius = radius + 42;
+    const labelRadius = radius + 55;
 
     const arcs = svg.selectAll('arc').data(pie(data.market_share)).join('g');
     arcs.append('path')
@@ -145,7 +145,7 @@ async function renderMarketSharePie(containerId, data) {
             .attr('stroke', isLight ? '#64748b' : 'rgba(255,255,255,0.5)').attr('stroke-width', 1);
         g.append('text').attr('transform', `translate(${textX},${outerY})`)
             .attr('text-anchor', anchor).attr('dominant-baseline', 'middle')
-            .attr('fill', labelFill).attr('font-size', 12).attr('font-weight', 600)
+            .attr('fill', labelFill).attr('font-size', 13).attr('font-weight', 600)
             .text(`${d.data.carrier || d.data.operator}: ${d.data.subscriber_share_pct || d.data.share_pct}%`)
             .style('opacity', 0).transition().delay(400).style('opacity', 1);
     });
@@ -162,12 +162,12 @@ async function renderMarketSharePie(containerId, data) {
         .attr('fill', isLight ? '#64748b' : 'rgba(255,255,255,0.85)').attr('font-size', 13)
         .text('Total Subscribers');
 
-    // Optional legend with insights (carrier names already shown outside donut)
+    // Legend with carrier names (repeated) and insights
     const opKey = d => d.carrier || d.operator;
-    const legend = container.append('div').attr('class', 'chart-legend').style('margin-top', '12px').style('font-size', '11px').style('color', isLight ? '#64748b' : 'rgba(255,255,255,0.7)');
+    const legend = container.append('div').attr('class', 'chart-legend').style('margin-top', '14px').style('display', 'flex').style('flex-wrap', 'wrap').style('gap', '10px 24px');
     data.market_share.forEach(d => {
-        legend.append('div').style('margin-bottom', '4px')
-            .html(`<span style="display:inline-block;width:10px;height:10px;background:${color(opKey(d))};margin-right:6px;border-radius:2px;vertical-align:middle"></span>${d.insight || ''}`);
+        legend.append('div').style('font-size', '12px').style('line-height', '1.5')
+            .html(`<span style="display:inline-block;width:12px;height:12px;background:${color(opKey(d))};margin-right:8px;border-radius:3px;vertical-align:middle"></span><strong>${opKey(d)}</strong>: ${d.insight || ''}`);
     });
 }
 

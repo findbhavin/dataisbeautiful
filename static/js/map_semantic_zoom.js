@@ -451,7 +451,10 @@ class MapVisualizer {
         }
         const stateData = this.getStateDataForFeature(d);
         if (!stateData) return '#e2e8f0';
-        return this.colorScale(stateData[this.currentMetric]);
+        const val = stateData[this.currentMetric];
+        const isRevenue = this.currentMetric === 'revenue_inr_cr' || this.currentMetric === 'annual_revenue_b';
+        if (isRevenue && (val == null || val === 0 || isNaN(val))) return '#e2e8f0';
+        return this.colorScale(val);
     }
     
     renderStateLabels() {
@@ -572,10 +575,11 @@ class MapVisualizer {
     }
     
     updateColorScale() {
+        const isRev = this.currentMetric === 'revenue_inr_cr' || this.currentMetric === 'annual_revenue_b';
         const values = this.data.by_state
             .filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO)
             .map(d => d[this.currentMetric])
-            .filter(v => v != null && !isNaN(v));
+            .filter(v => v != null && !isNaN(v) && (!isRev || v > 0));
         
         const extent = d3.extent(values);
         
@@ -583,7 +587,7 @@ class MapVisualizer {
         this.debugLog('[MapVisualizer] Value extent:', extent, 'min:', extent[0], 'max:', extent[1]);
         this.debugLog('[MapVisualizer] Number of data points:', values.length);
         
-        const isRevenue = this.currentMetric === 'revenue_inr_cr';
+        const isRevenue = this.currentMetric === 'revenue_inr_cr' || this.currentMetric === 'annual_revenue_b';
         const revenueScheme = ['#b91c1c', '#f87171', '#fef08a', '#86efac', '#15803d'];
         const scheme = isRevenue ? revenueScheme : this.colorScheme;
         
@@ -630,7 +634,7 @@ class MapVisualizer {
             return;
         }
         
-        const isRevenue = this.currentMetric === 'revenue_inr_cr';
+        const isRevenue = this.currentMetric === 'revenue_inr_cr' || this.currentMetric === 'annual_revenue_b';
         const legendScheme = isRevenue ? ['#b91c1c', '#f87171', '#fef08a', '#86efac', '#15803d'] : this.colorScheme;
         const legendWidth = legendContainer.node().clientWidth;
         const segmentWidth = legendWidth / legendScheme.length;
@@ -643,10 +647,11 @@ class MapVisualizer {
                 .style('display', 'inline-block');
         });
         
+        const isRev = this.currentMetric === 'revenue_inr_cr' || this.currentMetric === 'annual_revenue_b';
         const values = this.data.by_state
             .filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO)
             .map(d => d[this.currentMetric])
-            .filter(v => v != null && !isNaN(v));
+            .filter(v => v != null && !isNaN(v) && (!isRev || v > 0));
         const extent = d3.extent(values);
         if (!minLabel.empty() && !maxLabel.empty()) {
             minLabel.text(this.formatValue(extent[0]));
@@ -922,6 +927,11 @@ class MapVisualizer {
             if (value >= 1) return `₹${value.toFixed(0)} Cr`;
             return value != null ? `₹${value}` : '0';
         }
+        if (this.currentMetric === 'annual_revenue_b') {
+            if (value >= 1) return `$${value.toFixed(1)}B`;
+            if (value > 0) return `$${(value * 1000).toFixed(0)}M`;
+            return value != null ? `$${value}` : '$0';
+        }
         if (this.country === 'india' || this.country === 'india-option-b') {
             if (value >= 1) return `${value.toFixed(1)} Cr`;
             if (value > 0) return `${(value * 10).toFixed(1)} L`;
@@ -1194,7 +1204,8 @@ class MapVisualizer {
             ['att_postpaid', 'AT&T (Post)'],
             ['others_total', 'Others (carriers) (T)'],
             ['others_prepaid', 'Others (carriers) (Pre)'],
-            ['others_postpaid', 'Others (carriers) (Post)']
+            ['others_postpaid', 'Others (carriers) (Post)'],
+            ['annual_revenue_b', 'Revenue ($B)']
         ];
         const opts = (country === 'india' || country === 'india-option-b') ? indiaOpts : usOpts;
         sel.innerHTML = opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
