@@ -228,6 +228,37 @@ async def get_india_option_b_geojson() -> Dict[str, Any]:
             "properties": {"name": st_nm, "NAME_1": st_nm, "st_nm": st_nm},
             "geometry": {"type": geom_type, "coordinates": geom_coords}
         })
+    # Gracefully amend with Ladakh from local file (Leh+Kargil) for correct rendering
+    ladakh_path = Path(__file__).parent.parent.parent / "data" / "india" / "ladakh.geojson"
+    if ladakh_path.exists():
+        try:
+            with open(ladakh_path, 'r') as f:
+                ladakh_data = json.load(f)
+            ladakh_features = ladakh_data.get("features") or []
+            if ladakh_features:
+                coords_list = []
+                for f in ladakh_features:
+                    geom = f.get("geometry")
+                    if not geom:
+                        continue
+                    gtype = geom.get("type", "")
+                    c = geom.get("coordinates", [])
+                    if gtype == "Polygon":
+                        coords_list.append(c)
+                    elif gtype == "MultiPolygon":
+                        coords_list.extend(c)
+                if coords_list:
+                    geom_type = "MultiPolygon" if len(coords_list) > 1 else "Polygon"
+                    geom_coords = coords_list if len(coords_list) > 1 else coords_list[0]
+                    ladakh_feature = {
+                        "type": "Feature",
+                        "properties": {"name": "Ladakh", "NAME_1": "Ladakh", "st_nm": "Ladakh"},
+                        "geometry": {"type": geom_type, "coordinates": geom_coords}
+                    }
+                    merged = [m for m in merged if (m.get("properties") or {}).get("name") != "Ladakh"]
+                    merged.append(ladakh_feature)
+        except Exception:
+            pass
     return {"type": "FeatureCollection", "features": merged}
 
 
