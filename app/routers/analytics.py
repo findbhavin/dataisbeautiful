@@ -79,6 +79,69 @@ async def get_india_data_center_tiers() -> Dict[str, Any]:
         return {"tier1": {"label": "", "states": []}, "tier2": {"label": "", "states": []}, "tier3": {"label": "", "states": []}}
 
 
+@router.get("/india/analytics")
+async def get_india_analytics() -> Dict[str, Any]:
+    """India analytics: metros, spectrum, revenue, market share, top states."""
+    try:
+        return _load_json("india/analytics.json")
+    except HTTPException:
+        return {}
+
+
+@router.get("/india/metros")
+async def get_india_metros() -> Dict[str, Any]:
+    """India top 10 metros by carrier (dummy data)."""
+    try:
+        data = _load_json("india/analytics.json")
+        return {"top10_metros": data.get("top10_metros", []), "country": "India", "currency": "INR", "unit": "Cr"}
+    except HTTPException:
+        return {"top10_metros": [], "country": "India"}
+
+
+@router.get("/india/spectrum")
+async def get_india_spectrum() -> Dict[str, Any]:
+    """India spectrum by state."""
+    try:
+        data = _load_json("india/analytics.json")
+        return {"spectrum_by_state": data.get("spectrum_by_state", []), "country": "India"}
+    except HTTPException:
+        return {"spectrum_by_state": []}
+
+
+@router.get("/india/revenue-by-state")
+async def get_india_revenue_by_state() -> Dict[str, Any]:
+    """India revenue by state (INR Cr). Returns revenue_top10 for chart compatibility."""
+    try:
+        data = _load_json("india/analytics.json")
+        rev = data.get("revenue_by_state", [])[:10]
+        revenue_top10 = [
+            {"state": d["state"], "revenue_inr_cr": d.get("revenue_inr_cr", 0), "annual_revenue_b": d.get("revenue_inr_cr", 0) / 1000, "growth_pct": d.get("growth_pct", 0)}
+            for d in rev
+        ]
+        return {"revenue_top10": revenue_top10, "country": "India", "currency": "INR"}
+    except HTTPException:
+        return {"revenue_top10": []}
+
+
+@router.get("/india/market-wide")
+async def get_india_market_wide() -> Dict[str, Any]:
+    """India market-wide: market share, top states, national metrics."""
+    try:
+        data = _load_json("india/analytics.json")
+        # Build top10_states from revenue_by_state for chart compatibility
+        rev = data.get("revenue_by_state", [])
+        top10 = [{"state": d["state"], "customers_m": d.get("revenue_inr_cr", 0) / 1000, "revenue_inr_cr": d.get("revenue_inr_cr", 0), "growth_pct": d.get("growth_pct")} for d in rev[:10]]
+        return {
+            "market_share": data.get("market_share", []),
+            "top10_states": top10,
+            "country": "India",
+            "currency": "INR",
+            "unit": "Cr"
+        }
+    except HTTPException:
+        return {"market_share": [], "top10_states": []}
+
+
 @router.get("/hub-pairs")
 async def get_hub_pairs() -> Dict[str, Any]:
     """Hub pairs by type: dual (Regional & Edge), single (Single Edge), superCore (Super Core)."""

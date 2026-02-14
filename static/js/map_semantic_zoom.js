@@ -444,11 +444,17 @@ class MapVisualizer {
             .join('text')
             .attr('class', 'state-label')
             .attr('x', d => {
-                const coords = this.projection([d.longitude, d.latitude]);
+                const lng = d?.longitude;
+                const lat = d?.latitude;
+                if (lng == null || lat == null) return 0;
+                const coords = this.projection([lng, lat]);
                 return coords ? coords[0] : 0;
             })
             .attr('y', d => {
-                const coords = this.projection([d.longitude, d.latitude]);
+                const lng = d?.longitude;
+                const lat = d?.latitude;
+                if (lng == null || lat == null) return 0;
+                const coords = this.projection([lng, lat]);
                 return coords ? coords[1] : 0;
             })
             .attr('text-anchor', 'middle')
@@ -484,14 +490,20 @@ class MapVisualizer {
             .join('text')
             .attr('class', 'state-label')
             .attr('x', d => {
-                const c = d3.geoCentroid(d);
-                const p = this.projection(c);
-                return p ? p[0] : 0;
+                try {
+                    if (!d?.geometry) return 0;
+                    const c = d3.geoCentroid(d);
+                    const p = this.projection(c);
+                    return p ? p[0] : 0;
+                } catch (e) { return 0; }
             })
             .attr('y', d => {
-                const c = d3.geoCentroid(d);
-                const p = this.projection(c);
-                return p ? p[1] : 0;
+                try {
+                    if (!d?.geometry) return 0;
+                    const c = d3.geoCentroid(d);
+                    const p = this.projection(c);
+                    return p ? p[1] : 0;
+                } catch (e) { return 0; }
             })
             .attr('text-anchor', 'middle')
             .attr('dominant-baseline', 'middle')
@@ -624,7 +636,9 @@ class MapVisualizer {
                 })();
                 const value = key ? (stateValues[key] || '').trim() : '';
                 if (!value || value === 'None') return;
-                const centroid = d3.geoCentroid(d);
+                let centroid;
+                try { centroid = d?.geometry ? d3.geoCentroid(d) : null; } catch (e) { return; }
+                if (!centroid) return;
                 const projected = this.projection(centroid);
                 if (!projected) return;
                 const color = /super\s*core/i.test(value) ? '#084081' : '#0868ac';
@@ -634,7 +648,9 @@ class MapVisualizer {
             }
             const activeTiers = this.getActiveTiersForState(d);
             if (activeTiers.length === 0) return;
-            const centroid = d3.geoCentroid(d);
+            let centroid;
+            try { centroid = d?.geometry ? d3.geoCentroid(d) : null; } catch (e) { return; }
+            if (!centroid) return;
             const projected = this.projection(centroid);
             if (!projected) return;
             const [cx, cy] = projected;
@@ -708,8 +724,13 @@ class MapVisualizer {
         const drawPair = (p, isCustom) => {
             const c1 = p.c1;
             const c2 = p.c2 || (isCustom ? null : null);
-            const p1 = this.projection(c1);
-            const p2 = c2 ? this.projection(c2) : null;
+            if (!c1 || !Array.isArray(c1)) return;
+            const toLngLat = (c) => Array.isArray(c) ? c : (c && (c.lng != null || c.lngitude != null) ? [c.lng ?? c.longitude, c.lat ?? c.latitude] : null);
+            const coord1 = toLngLat(c1);
+            const coord2 = c2 ? toLngLat(c2) : null;
+            if (!coord1) return;
+            const p1 = this.projection(coord1);
+            const p2 = coord2 ? this.projection(coord2) : null;
             const color = p.color || '#0284c7';
             if (p1 && p2) {
                 layer.append('line')
@@ -869,13 +890,17 @@ class MapVisualizer {
         const subtitleEl = document.getElementById('stat-total-subtitle');
         const statesElement = d3.select('#stat-states');
         const diffNote = document.getElementById('map-total-note');
+        const othersCard = document.getElementById('stat-others-card');
+        const othersValue = document.getElementById('stat-others-value');
+        const othersLabel = document.getElementById('stat-others-label');
         if (this.country === 'india') {
             const total = this.data.total_subscribers_display || (this.data.total_subscribers / 1e7).toFixed(2) + ' Cr';
             const stateCount = (this.data.by_state || []).length;
             if (!totalElement.empty()) totalElement.text(total);
             if (subtitleEl) subtitleEl.textContent = 'TRAI / GSMA estimates (Sep 2025)';
             if (!statesElement.empty()) statesElement.text(stateCount);
-            if (diffNote) diffNote.innerHTML = `<strong>${total}</strong> total wireless subscribers. Currency: INR.</strong>`;
+            if (diffNote) diffNote.innerHTML = `<strong>${total}</strong> total wireless subscribers. Currency: INR.`;
+            if (othersCard) othersCard.style.display = 'none';
         } else {
             const MOBILE_SUBSCRIBERS_TOTAL = 333;
             const US_POPULATION_APPROX = 350;
@@ -886,6 +911,9 @@ class MapVisualizer {
             const othersCarriersPre = this.data.by_state.reduce((s, d) => s + (d.others_prepaid || 0), 0);
             if (diffNote) diffNote.innerHTML = `<strong>${MOBILE_SUBSCRIBERS_TOTAL}M</strong> total mobile subscribers (of ~${US_POPULATION_APPROX}M US population). <em>Others (carriers)</em>: ${othersCarriers.toFixed(1)}M (${othersCarriersPre.toFixed(1)} Pre + ${othersCarriersPost.toFixed(1)} Post) — Cable/Dish, etc.`;
             if (!statesElement.empty()) statesElement.text(this.data.by_state.filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO).length);
+            if (othersCard) othersCard.style.display = '';
+            if (othersValue) othersValue.textContent = '32+19';
+            if (othersLabel) othersLabel.textContent = 'States (32 shown + 19 in Others)';
         }
     }
     
