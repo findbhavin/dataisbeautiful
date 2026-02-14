@@ -116,7 +116,7 @@ class MapVisualizer {
     
     async loadData() {
         try {
-            const url = this.country === 'india' ? '/api/mobile/india/data' : '/api/mobile/data';
+            const url = (this.country === 'india' || this.country === 'india-option-b') ? '/api/mobile/india/data' : '/api/mobile/data';
             const response = await fetch(url);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -148,7 +148,7 @@ class MapVisualizer {
         this.g = this.svg.append('g');
         
         // Setup projection: US uses AlbersUsa, India uses Mercator centered on India
-        if (this.country === 'india') {
+        if (this.country === 'india' || this.country === 'india-option-b') {
             this.projection = d3.geoMercator()
                 .center([78, 22])
                 .translate([this.width / 2, this.height / 2])
@@ -201,6 +201,22 @@ class MapVisualizer {
      * Load topology/geography. US uses TopoJSON. India uses GeoJSON (TopoJSON has invalid arc indices).
      */
     async loadTopology() {
+        if (this.country === 'india-option-b') {
+            try {
+                const geoRes = await fetch('/api/geo/india/option-b/geojson');
+                if (geoRes.ok) {
+                    const geojson = await geoRes.json();
+                    if (geojson?.features?.length) {
+                        console.log('✓ Loaded India Option B (udit-001):', geojson.features.length, 'states');
+                        return { type: 'geojson', data: geojson };
+                    }
+                }
+                throw new Error('India Option B map unavailable');
+            } catch (e) {
+                console.error('India Option B map failed:', e);
+                throw e;
+            }
+        }
         if (this.country === 'india') {
             try {
                 const geoRes = await fetch('/api/geo/india/geojson/states');
@@ -379,7 +395,7 @@ class MapVisualizer {
     }
     
     getStateDataForFeature(feature) {
-        if (this.country === 'india') {
+        if (this.country === 'india' || this.country === 'india-option-b') {
             // Try matching by state_iso (from TopoJSON id)
             const stateIso = feature.id || feature.properties?.state_iso;
             if (stateIso) {
@@ -389,8 +405,8 @@ class MapVisualizer {
                 if (matchByIso) return matchByIso;
             }
             
-            // Try matching by name (normalize " & " to " and " for GeoJSON compatibility)
-            const name = (feature.properties?.name || feature.properties?.NAME_1 || '').replace(/\s*&\s*/g, ' and ').trim();
+            // Try matching by name (normalize " & " to " and "; also support st_nm from udit-001)
+            const name = (feature.properties?.name || feature.properties?.NAME_1 || feature.properties?.st_nm || '').replace(/\s*&\s*/g, ' and ').trim();
             if (!name) return null;
             const norm = (s) => (s || '').replace(/\s*&\s*/g, ' and ').toLowerCase().trim();
             return this.data.by_state.find(d =>
@@ -532,8 +548,8 @@ class MapVisualizer {
             .style('paint-order', 'stroke')
             .style('pointer-events', 'none')
             .text(d => {
-                if (this.country === 'india') {
-                    return d.properties?.NAME_1 || d.properties?.name || '';
+                if (this.country === 'india' || this.country === 'india-option-b') {
+                    return d.properties?.NAME_1 || d.properties?.name || d.properties?.st_nm || '';
                 }
                 const fips = d.id != null ? String(d.id).padStart(2, '0') : null;
                 const iso = fips && this.fipsToIso[fips] ? this.fipsToIso[fips] : null;
@@ -647,7 +663,7 @@ class MapVisualizer {
         this.statesFeatures.forEach(d => {
             if (this.mapMode === 'data-centers') {
                 const stateValues = window.__dataCentersStateValues || {};
-                const key = this.country === 'india' ? (d.properties?.NAME_1 || d.properties?.name || '') : (() => {
+                const key = (this.country === 'india' || this.country === 'india-option-b') ? (d.properties?.NAME_1 || d.properties?.name || d.properties?.st_nm || '') : (() => {
                     const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
                     return fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
                 })();
@@ -697,8 +713,8 @@ class MapVisualizer {
         const tiers = window.__dataCenterTiers || { tier1: new Set(), tier2: new Set(), tier3: new Set() };
         const visible = window.__dataCenterTiersVisible || { tier1: true, tier2: true, tier3: true };
         let key;
-        if (this.country === 'india') {
-            key = d.properties?.NAME_1 || d.properties?.name || '';
+        if (this.country === 'india' || this.country === 'india-option-b') {
+            key = d.properties?.NAME_1 || d.properties?.name || d.properties?.st_nm || '';
         } else {
             const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
             key = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
@@ -713,8 +729,8 @@ class MapVisualizer {
     
     stateHasDcData(d) {
         let key;
-        if (this.country === 'india') {
-            key = d.properties?.NAME_1 || d.properties?.name || '';
+        if (this.country === 'india' || this.country === 'india-option-b') {
+            key = d.properties?.NAME_1 || d.properties?.name || d.properties?.st_nm || '';
         } else {
             const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
             key = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
@@ -891,7 +907,7 @@ class MapVisualizer {
     }
     
     formatValue(value) {
-        if (this.country === 'india') {
+        if (this.country === 'india' || this.country === 'india-option-b') {
             if (value >= 1) return `${value.toFixed(1)} Cr`;
             if (value > 0) return `${(value * 10).toFixed(1)} L`;
             return '0';
@@ -910,7 +926,7 @@ class MapVisualizer {
         const othersCard = document.getElementById('stat-others-card');
         const othersValue = document.getElementById('stat-others-value');
         const othersLabel = document.getElementById('stat-others-label');
-        if (this.country === 'india') {
+        if (this.country === 'india' || this.country === 'india-option-b') {
             const total = this.data.total_subscribers_display || (this.data.total_subscribers / 1e7).toFixed(2) + ' Cr';
             const stateCount = (this.data.by_state || []).length;
             if (!totalElement.empty()) totalElement.text(total);
@@ -1164,7 +1180,7 @@ class MapVisualizer {
             ['others_prepaid', 'Others (carriers) (Pre)'],
             ['others_postpaid', 'Others (carriers) (Post)']
         ];
-        const opts = country === 'india' ? indiaOpts : usOpts;
+        const opts = (country === 'india' || country === 'india-option-b') ? indiaOpts : usOpts;
         sel.innerHTML = opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
     };
 

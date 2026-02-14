@@ -176,6 +176,61 @@ async def get_india_states_geojson() -> Dict[str, Any]:
     raise HTTPException(status_code=404, detail="India GeoJSON not found. Run: py scripts/download_india_geojson.py")
 
 
+@router.get("/india/option-b/geojson")
+async def get_india_option_b_geojson() -> Dict[str, Any]:
+    """
+    Get India states GeoJSON from udit-001/india-maps-data (Option B).
+    Fetches from CDN and aggregates district-level data to state-level.
+    Uses st_nm for state name matching.
+    """
+    import urllib.request
+    url = "https://cdn.jsdelivr.net/gh/udit-001/india-maps-data@ef25ebc/geojson/india.geojson"
+    try:
+        with urllib.request.urlopen(url, timeout=15) as r:
+            data = json.loads(r.read().decode())
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"India Option B GeoJSON unavailable: {str(e)}")
+    if not data.get("features"):
+        raise HTTPException(status_code=502, detail="India Option B GeoJSON has no features")
+    # Aggregate district features by state (st_nm)
+    # Normalize state names to match our mobile data
+    NAME_ALIASES = {
+        "Andaman and Nicobar Islands": "Andaman and Nicobar",
+    }
+    from collections import defaultdict
+    by_state = defaultdict(list)
+    for f in data["features"]:
+        props = f.get("properties") or {}
+        st_nm = props.get("st_nm") or props.get("name") or ""
+        if st_nm:
+            st_nm = NAME_ALIASES.get(st_nm, st_nm)
+            by_state[st_nm].append(f)
+    # Merge geometries per state into MultiPolygon
+    merged = []
+    for st_nm, features in by_state.items():
+        coords_list = []
+        for f in features:
+            geom = f.get("geometry")
+            if not geom:
+                continue
+            gtype = geom.get("type", "")
+            c = geom.get("coordinates", [])
+            if gtype == "Polygon":
+                coords_list.append(c)
+            elif gtype == "MultiPolygon":
+                coords_list.extend(c)
+        if not coords_list:
+            continue
+        geom_type = "MultiPolygon" if len(coords_list) > 1 else "Polygon"
+        geom_coords = coords_list if len(coords_list) > 1 else coords_list[0]
+        merged.append({
+            "type": "Feature",
+            "properties": {"name": st_nm, "NAME_1": st_nm, "st_nm": st_nm},
+            "geometry": {"type": geom_type, "coordinates": geom_coords}
+        })
+    return {"type": "FeatureCollection", "features": merged}
+
+
 @router.get("/geojson/states")
 async def get_states_geojson() -> Dict[str, Any]:
     """

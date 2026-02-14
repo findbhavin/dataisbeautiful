@@ -24,6 +24,7 @@
             <label for="country-select">Map:</label>
             <select id="country-select">
                 <option value="india" selected>India</option>
+                <option value="india-option-b">India - Option B</option>
                 <option value="us">United States</option>
             </select>
         </div>
@@ -389,7 +390,7 @@
                 
                 // Sync Data page UI with country (hide US "Others" when India)
                 function updateDataPageForCountry() {
-                    const isIndia = window.__country === 'india';
+                    const isIndia = window.__country === 'india' || window.__country === 'india-option-b';
                     document.querySelector('.info-banner')?.style.setProperty('display', isIndia ? 'none' : '');
                     document.querySelector('.others-data-card')?.style.setProperty('display', isIndia ? 'none' : '');
                     const h3 = document.querySelector('.data-table-section h3');
@@ -415,14 +416,14 @@
                     const container = document.getElementById('data-table-container');
                     if (!container || container.dataset.loaded === 'true') return;
                     const country = window.__country || 'us';
-                    const url = country === 'india' ? '/api/mobile/india/data' : '/api/mobile/data';
+                    const url = (country === 'india' || country === 'india-option-b') ? '/api/mobile/india/data' : '/api/mobile/data';
                     fetch(url).then(r => r.json()).then(data => {
                         if (!data.by_state || data.by_state.length === 0) {
                             container.innerHTML = '<p>No data available.</p>';
                             return;
                         }
                         const fmt = v => typeof v === 'number' ? (v >= 1 ? v.toFixed(1) : v.toFixed(2)) : (v || '-');
-                        const isIndia = country === 'india';
+                        const isIndia = country === 'india' || country === 'india-option-b';
                         let html = '<table class="data-table data-table-operators"><thead><tr>';
                         html += '<th>State/District</th>';
                         if (isIndia) {

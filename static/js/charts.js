@@ -139,7 +139,7 @@ async function renderMarketSharePie(containerId, data) {
         .style('opacity', 0).transition().delay(400).style('opacity', 1);
 
     // Center label: total subscribers (data-first: prominent values)
-    const isIndia = data.country === 'India' || window.__country === 'india';
+    const isIndia = data.country === 'India' || (window.__country === 'india' || window.__country === 'india-option-b');
     const totalSubs = data.market_share.reduce((s, d) => s + (d.subscriber_share_pct || d.share_pct || 0), 0);
     const totalSubsCr = data.market_share.reduce((s, d) => s + (d.subscribers_cr || 0), 0);
     const centerLabel = isIndia && totalSubsCr > 0 ? `~${Math.round(totalSubsCr)} Cr` : '~333M';
@@ -169,7 +169,7 @@ async function renderMetrosBar(containerId, data) {
     }
     if (!ensureContainerVisible(containerId)) return;
 
-    const isIndia = data.country === 'India' || window.__country === 'india';
+    const isIndia = data.country === 'India' || (window.__country === 'india' || window.__country === 'india-option-b');
     let metros = data.top10_metros;
     if (isIndia && metros[0] && !metros[0].jio && metros[0].subscribers_cr != null) {
         const shares = { jio: 0.385, airtel: 0.321, vi: 0.189, bsnl: 0.082, others: 0.023 };
@@ -293,7 +293,7 @@ async function renderSpectrumBar(containerId, data) {
     const container = d3.select(`#${containerId}`);
     if (container.empty()) return;
     container.selectAll('*').remove();
-    const isIndia = data?.country === 'India' || window.__country === 'india';
+    const isIndia = data?.country === 'India' || (window.__country === 'india' || window.__country === 'india-option-b');
     const hasIndiaSpectrum = isIndia && data?.spectrum_by_state && Array.isArray(data.spectrum_by_state) && data.spectrum_by_state.length > 0;
     const hasUSSpectrum = data?.spectrum_depth_nationwide && Array.isArray(data.spectrum_depth_nationwide) && data.spectrum_depth_nationwide.length > 0;
     if (!hasIndiaSpectrum && !hasUSSpectrum) {
@@ -368,7 +368,7 @@ async function renderRevenueBar(containerId, data) {
     }
     if (!ensureContainerVisible(containerId)) return;
 
-    const isIndia = data.country === 'India' || window.__country === 'india';
+    const isIndia = data.country === 'India' || (window.__country === 'india' || window.__country === 'india-option-b');
     const states = data.revenue_top10;
     const count = states.length;
     const subtitleEl = document.getElementById('revenue-subtitle');
@@ -432,7 +432,7 @@ async function renderTopStatesBar(containerId, data, operatorKey) {
     }
     if (!ensureContainerVisible(containerId)) return;
 
-    const isIndia = data.country === 'India' || window.__country === 'india';
+    const isIndia = data.country === 'India' || (window.__country === 'india' || window.__country === 'india-option-b');
     const margin = { top: 20, right: 80, bottom: 30, left: 100 };
     const width = 700 - margin.left - margin.right;
     const height = 380 - margin.top - margin.bottom;
@@ -582,13 +582,13 @@ function parseTableInput() {
 }
 
 async function loadMarketShare() {
-    const isIndia = window.__country === 'india';
+    const isIndia = (window.__country === 'india' || window.__country === 'india-option-b');
     const url = isIndia ? '/api/analytics/india/market-wide' : '/api/analytics/market-wide';
     const data = await fetch(url).then(r => r.json());
     await renderMarketSharePie('chart-market-share', data);
 }
 async function loadMetros() {
-    const isIndia = window.__country === 'india';
+    const isIndia = (window.__country === 'india' || window.__country === 'india-option-b');
     const url = isIndia ? '/api/analytics/india/metros' : '/api/analytics/metros';
     const data = await fetch(url).then(r => r.json());
     const h3 = document.querySelector('#tab-metros h3');
@@ -596,7 +596,7 @@ async function loadMetros() {
     await renderMetrosBar('chart-metros', data);
 }
 async function loadSpectrum() {
-    const isIndia = window.__country === 'india';
+    const isIndia = (window.__country === 'india' || window.__country === 'india-option-b');
     const url = isIndia ? '/api/analytics/india/spectrum' : '/api/analytics/spectrum';
     const data = await fetch(url).then(r => r.json());
     const h3 = document.querySelector('#tab-spectrum h3');
@@ -604,7 +604,7 @@ async function loadSpectrum() {
     await renderSpectrumBar('chart-spectrum', data);
 }
 async function loadRevenue() {
-    const isIndia = window.__country === 'india';
+    const isIndia = (window.__country === 'india' || window.__country === 'india-option-b');
     const url = isIndia ? '/api/analytics/india/revenue-by-state' : '/api/analytics/revenue-by-state';
     const data = await fetch(url).then(r => r.json());
     const h3 = document.querySelector('#tab-revenue h3');
@@ -612,7 +612,7 @@ async function loadRevenue() {
     await renderRevenueBar('chart-revenue', data);
 }
 async function loadTopStates() {
-    const isIndia = window.__country === 'india';
+    const isIndia = (window.__country === 'india' || window.__country === 'india-option-b');
     const url = isIndia ? '/api/analytics/india/market-wide' : '/api/analytics/market-wide';
     const data = await fetch(url).then(r => r.json());
     const h3 = document.querySelector('#tab-top-states h3');
