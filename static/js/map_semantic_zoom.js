@@ -777,34 +777,59 @@ class MapVisualizer {
         
         if (this.mapMode === 'data-centers') {
             const stateValues = window.__dataCentersStateValues || {};
-            const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
-            const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
-            const stateName = (this.data?.by_state?.find(s => s.state_iso === iso)?.state_name) || (d.properties?.name) || iso || 'Unknown';
-            const value = iso ? (stateValues[iso] || '').trim() : '';
+            let stateName, key, value;
+            if (this.country === 'india') {
+                stateName = (d.properties?.NAME_1 || d.properties?.name || '').replace(/\s*&\s*/g, ' and ').trim() || 'Unknown';
+                key = stateName !== 'Unknown' ? stateName : null;
+                value = key ? (stateValues[key] || stateValues[key.replace(/\s+and\s+/g, ' & ')])?.trim() : '';
+            } else {
+                const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
+                const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
+                stateName = (this.data?.by_state?.find(s => s.state_iso === iso)?.state_name) || (d.properties?.name) || iso || 'Unknown';
+                value = iso ? (stateValues[iso] || '').trim() : '';
+            }
             const typeStr = value && value !== 'None' ? value : 'No data center';
             this.tooltip.style('opacity', 1).html(`<div class="tooltip-title">${stateName}</div><div class="tooltip-content">${typeStr}</div>`);
             return;
         }
         if (this.mapMode === 'dc-tiers') {
-            const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
-            const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
-            const stateName = (this.data?.by_state?.find(s => s.state_iso === iso)?.state_name) || (d.properties?.name) || iso || 'Unknown';
+            let stateName, key;
             const tiers = window.__dataCenterTiers || { tier1: new Set(), tier2: new Set(), tier3: new Set() };
+            if (this.country === 'india') {
+                stateName = (d.properties?.NAME_1 || d.properties?.name || '').replace(/\s*&\s*/g, ' and ').trim() || 'Unknown';
+                key = stateName !== 'Unknown' ? stateName : null;
+            } else {
+                const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
+                const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
+                stateName = (this.data?.by_state?.find(s => s.state_iso === iso)?.state_name) || (d.properties?.name) || iso || 'Unknown';
+                key = iso;
+            }
             const labels = [];
-            if (tiers.tier1?.has(iso)) labels.push('Tier 1 - Super Core');
-            if (tiers.tier2?.has(iso)) labels.push('Tier 2 - Regional');
-            if (tiers.tier3?.has(iso)) labels.push('Tier 3 - Edge');
+            if (key && tiers.tier1?.has(key)) labels.push('Tier 1 - Super Core');
+            if (key && tiers.tier2?.has(key)) labels.push('Tier 2 - Regional');
+            if (key && tiers.tier3?.has(key)) labels.push('Tier 3 - Edge');
             const tierStr = labels.length ? labels.join(', ') : 'No data center';
             this.tooltip.style('opacity', 1).html(`<div class="tooltip-title">${stateName}</div><div class="tooltip-content">${tierStr}</div>`);
             return;
         }
         if (this.mapMode === 'hub-pairs') {
-            const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
-            const iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
-            const stateName = this.isoToStateName[iso] || (this.data?.by_state?.find(s => s.state_iso === iso)?.state_name) || iso || 'Unknown';
+            let stateName, iso;
+            if (this.country === 'india') {
+                stateName = (d.properties?.NAME_1 || d.properties?.name || '').replace(/\s*&\s*/g, ' and ').trim() || 'Unknown';
+                iso = stateName !== 'Unknown' ? stateName : null;
+            } else {
+                const fipsCode = d.id != null ? String(d.id).padStart(2, '0') : null;
+                iso = fipsCode && this.fipsToIso[fipsCode] ? this.fipsToIso[fipsCode] : null;
+                stateName = this.isoToStateName[iso] || (this.data?.by_state?.find(s => s.state_iso === iso)?.state_name) || iso || 'Unknown';
+            }
             const byType = window.__hubPairsByType;
             const custom = window.__hubPairs || [];
-            const findPair = (list) => list?.find(p => typeof stateNameToIso === 'function' && stateNameToIso(p.state) === iso);
+            const norm = (s) => (s || '').replace(/\s*&\s*/g, ' and ').toLowerCase().trim();
+            const findPair = (list) => list?.find(p => {
+                if (!iso) return false;
+                if (this.country === 'india') return p.state && norm(p.state) === norm(iso);
+                return typeof stateNameToIso === 'function' && stateNameToIso(p.state) === iso;
+            });
             let pair = findPair(custom);
             let typeLabel = '';
             if (!pair && byType) {
@@ -823,6 +848,13 @@ class MapVisualizer {
         
         const stateData = this.getStateDataForFeature(d);
         if (!stateData) {
+            if (this.country === 'india') {
+                const name = (d.properties?.NAME_1 || d.properties?.name || '').replace(/\s*&\s*/g, ' and ').trim();
+                if (name) {
+                    this.tooltip.style('opacity', 1).html(`<div class="tooltip-title">${name}</div><div class="tooltip-content">No data</div>`);
+                    return;
+                }
+            }
             this.debugLog('[MapVisualizer] Mouse over state without data');
             this.tooltip.style('opacity', 0);
             return;

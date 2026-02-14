@@ -144,11 +144,45 @@ async def get_india_city_coordinates() -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Error loading India city coordinates: {str(e)}")
 
 
+def _merge_pok_into_india(data: dict) -> dict:
+    """Merge POK (Pakistan-occupied Kashmir) polygons into India GeoJSON."""
+    has_pok = any(
+        "POK" in str(f.get("properties", {}).get("NAME_1", "")) or
+        "Pakistan-occupied" in str(f.get("properties", {}).get("NAME_1", ""))
+        for f in data.get("features", [])
+    )
+    if has_pok:
+        return data
+    import urllib.request
+    try:
+        pok_url = "https://raw.githubusercontent.com/datameet/maps/master/Country/disputed/pok-alhasan.geojson"
+        with urllib.request.urlopen(pok_url, timeout=10) as r:
+            pok = json.loads(r.read().decode())
+        for f in pok.get("features", []):
+            if f.get("geometry"):
+                props = f.get("properties", {})
+                prov = props.get("PROVINCE", "POK")
+                dist = props.get("DISTRICT", "")
+                name = f"POK - {prov}" + (f" ({dist})" if dist else "")
+                data.setdefault("features", []).append({
+                    "type": "Feature",
+                    "properties": {
+                        "ID_0": 105, "ISO": "IND", "NAME_0": "India",
+                        "NAME_1": name, "TYPE_1": "Disputed",
+                        "ENGTYPE_1": "Disputed Territory"
+                    },
+                    "geometry": f["geometry"]
+                })
+    except Exception:
+        pass
+    return data
+
+
 @router.get("/india/geojson/states")
 async def get_india_states_geojson() -> Dict[str, Any]:
     """
-    Get India states GeoJSON for map visualization.
-    Tries local file first, falls back to CDN.
+    Get India states GeoJSON for map visualization (includes POK).
+    Tries local file first, falls back to CDN. Merges POK when using CDN.
     Returns GeoJSON FeatureCollection with Indian states (NAME_1 property).
     """
     import urllib.request
@@ -157,10 +191,12 @@ async def get_india_states_geojson() -> Dict[str, Any]:
         if geojson_path.exists():
             with open(geojson_path, 'r') as f:
                 data = json.load(f)
+            data = _merge_pok_into_india(data)
         else:
             url = "https://raw.githubusercontent.com/Subhash9325/GeoJson-Data-of-Indian-States/master/Indian_States"
             with urllib.request.urlopen(url, timeout=10) as r:
                 data = json.loads(r.read().decode())
+            data = _merge_pok_into_india(data)
         if data.get('features'):
             return data
     except Exception:
@@ -169,11 +205,12 @@ async def get_india_states_geojson() -> Dict[str, Any]:
         url = "https://raw.githubusercontent.com/Subhash9325/GeoJson-Data-of-Indian-States/master/Indian_States"
         with urllib.request.urlopen(url, timeout=10) as r:
             data = json.loads(r.read().decode())
+        data = _merge_pok_into_india(data)
         if data.get('features'):
             return data
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"India GeoJSON unavailable: {str(e)}")
-    raise HTTPException(status_code=404, detail="India GeoJSON not found. Run: py scripts/download_india_geojson.py")
+    raise HTTPException(status_code=404, detail="India GeoJSON not found. Run: py scripts/download_india_geojson_with_pok.py")
 
 
 @router.get("/geojson/states")

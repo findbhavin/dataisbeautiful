@@ -173,9 +173,14 @@ async function renderDataCentersMap(containerId, raw) {
     const stateCol = keys.find(k => /state|district/i.test(k)) || keys[0];
     const valueCol = keys.find(k => /type|dc|primary/i.test(k)) || keys[1];
     const stateValues = {};
+    const country = window.__country || 'us';
     rows.forEach(r => {
-        const iso = stateNameToIso(r[stateCol]);
-        if (iso) stateValues[iso] = (r[valueCol] || '').trim() || 'None';
+        const raw = (r[stateCol] || '').trim();
+        let key = stateNameToIso(raw);
+        if (!key && country === 'india' && raw) {
+            key = INDIA_STATE_NAME_TO_KEY[raw] || raw;
+        }
+        if (key) stateValues[key] = (r[valueCol] || '').trim() || 'None';
     });
     window.__dataCentersStateValues = stateValues;
     const modeSel = document.getElementById('map-mode-select');
