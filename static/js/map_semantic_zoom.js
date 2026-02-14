@@ -1344,7 +1344,11 @@ class MapVisualizer {
 
     const initializeMap = async () => {
         const countrySel = document.getElementById('country-select');
-        const country = countrySel ? countrySel.value : 'us';
+        const country = 'us';
+        if (countrySel) {
+            countrySel.value = 'us';
+            countrySel.disabled = true;
+        }
         window.__country = country;
         updateMetricSelectForCountry(country);
         const visualizer = new MapVisualizer('map-svg-container', country);
@@ -1388,7 +1392,13 @@ class MapVisualizer {
 
     const setupCountrySelector = () => {
         const sel = document.getElementById('country-select');
-        if (!sel) return;
+        if (!sel) {
+            window.__country = 'us';
+            return;
+        }
+        sel.value = 'us';
+        window.__country = 'us';
+        if (sel.disabled) return;
         sel.addEventListener('change', () => {
             window.__country = sel.value;
             if (typeof window.clearMapCaches === 'function') window.clearMapCaches();

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MapVisual - US Mobile Subscribers Visualization</title>
+    <title>US Telecom - Mobile Subscribers, Carriers, Market Landscape and Network Deployment Strategy</title>
     
     <!-- Glassmorphism CSS -->
     <link rel="stylesheet" href="/static/css/glassmorphism.css">
@@ -18,12 +18,11 @@
 <body class="theme-light">
     <!-- Header -->
     <div class="header">
-        <h1>MapVisual Engine</h1>
-        <p>Interactive Mobile Subscribers Visualization</p>
+        <h1>US Telecom</h1>
+        <p>Mobile Subscribers, Carriers, Market Landscape and Network Deployment Strategy</p>
         <div class="country-selector">
             <label for="country-select">Map:</label>
-            <select id="country-select">
-                <option value="india-option-b">India</option>
+            <select id="country-select" disabled aria-disabled="true">
                 <option value="us" selected>United States</option>
             </select>
         </div>
@@ -31,9 +30,9 @@
     
     <!-- Page Switcher -->
     <nav class="page-nav glass-container fade-in">
-        <button class="page-btn active" data-page="map">Map</button>
-        <button class="page-btn" data-page="data">Data &amp; Others</button>
-        <button class="page-btn" data-page="analytics">Analytics</button>
+        <button class="page-btn active" data-page="map">Mobile Subscribers</button>
+        <button class="page-btn" data-page="data">Carriers</button>
+        <button class="page-btn" data-page="analytics">Market Landscape</button>
     </nav>
     
     <!-- Stats Panel -->
@@ -148,7 +147,7 @@
             <button class="tab-btn" data-tab="revenue">Revenue by State</button>
             <button class="tab-btn" data-tab="top-states">Top 10 States</button>
             <button class="tab-btn" data-tab="table-input">Table Input</button>
-            <button class="tab-btn" data-tab="data-centers">Data Centers Map</button>
+            <button class="tab-btn" data-tab="data-centers">Network Deployment Strategy</button>
             <button class="tab-btn" data-tab="hub-pairs">Hub Pairs Map</button>
         </div>
         
@@ -204,7 +203,7 @@
         </div>
         <div class="chart-panel tab-content" id="tab-data-centers">
             <div class="glass-container fade-in">
-                <h3>Data Centers Map</h3>
+                <h3>Network Deployment Strategy</h3>
                 <p class="help-text">Paste table with State/District and Type of DC (e.g. Super Core). States with values will be highlighted on the map. Go to <strong>Map</strong> page and select &quot;Data Centers&quot; from the dropdown.</p>
                 <textarea id="data-centers-input" placeholder="State/District,Type of DC - Primary,Paired State/ District&#10;California,Super Core,Florida&#10;Texas,,&#10;Florida,Super Core,California&#10;..." rows="10"></textarea>
                 <button id="data-centers-apply">Apply &amp; View Map</button>
