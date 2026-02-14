@@ -1003,8 +1003,8 @@ class MapVisualizer {
             'others_total': 'Others (carriers) (T)',
             'others_prepaid': 'Others (carriers) (Pre)',
             'others_postpaid': 'Others (carriers) (Post)',
-            'revenue_inr_cr': 'Market Value (INR Cr)',
-            'annual_revenue_b': 'Market Value ($B)'
+            'revenue_inr_cr': 'Analytics On Market (INR Cr)',
+            'annual_revenue_b': 'Analytics On Market ($B)'
         };
         return labels[metric] || metric;
     }
