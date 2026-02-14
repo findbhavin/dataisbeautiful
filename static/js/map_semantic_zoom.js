@@ -18,7 +18,9 @@ class MapVisualizer {
         this.country = country || 'us';
         this.data = null;
         this.currentMetric = 'total_subscribers';
-        this.mapMode = 'subscribers';  // 'subscribers' | 'data-centers' | 'dc-tiers' | 'hub-pairs'
+        this.mapMode = 'subscribers';  // 'subscribers' | 'market-value' | 'data-centers' | 'dc-tiers' | 'hub-pairs'
+        this.lastSubscriberMetric = 'total_subscribers';
+        this.marketValueOverrideActive = false;
         this.colorScale = null;
         this.statesFeatures = null;  // Store for re-styling in different modes
         this.projection = null;
@@ -49,6 +51,14 @@ class MapVisualizer {
         this.DC_MODE_STROKE_WIDTH = 2;  // Stronger borders for Data Centers / Hub Pairs
         this.DC_MODE_STROKE_COLOR = '#0f172a';  // Darker stroke for DC modes
         this.STATE_FILL_OPACITY = 0.9;  // Slightly higher opacity for better color saturation
+
+        // India map tuning: lighter internal boundaries, slightly smaller labels.
+        if (this.country === 'india' || this.country === 'india-option-b') {
+            this.BASE_LABEL_FONT_SIZE = 8.5;
+            this.STATE_NAME_FONT_SIZE = 6;
+            this.STATE_STROKE_COLOR = 'rgba(100, 116, 139, 0.28)';
+            this.STATE_STROKE_WIDTH = 0.35;
+        }
         
         // ColorBrewer YlGnBu sequential (colorblind-friendly); lighter palette for light theme
         // Lighter = less dense, darker = more dense
@@ -153,8 +163,8 @@ class MapVisualizer {
             this.projection = d3.geoMercator()
                 .center([77.5, 22])
                 .translate([this.width / 2, this.height / 2])
-                .scale(600);
-            this.debugLog('[MapVisualizer] Projection configured: Mercator (India), bounds [68,6]-[97,38], scale=600');
+                .scale(635);
+            this.debugLog('[MapVisualizer] Projection configured: Mercator (India), bounds [68,6]-[97,38], scale=635');
         } else {
             this.projection = d3.geoAlbersUsa()
                 .translate([this.width / 2, this.height / 2])
@@ -314,6 +324,8 @@ class MapVisualizer {
                 .attr('fill', d => this.getStateFill(d))
                 .attr('stroke', strokeC)
                 .attr('stroke-width', strokeW)
+                .style('stroke', strokeC)
+                .style('stroke-width', strokeW)
                 .style('fill-opacity', this.STATE_FILL_OPACITY)
                 .on('mouseover', (event, d) => this.handleMouseOver(event, d))
                 .on('mousemove', (event, d) => this.handleMouseMove(event, d))
@@ -470,7 +482,7 @@ class MapVisualizer {
             this.renderStateNameLabels();
             return;
         }
-        if (this.mapMode !== 'subscribers') return;
+        if (this.mapMode !== 'subscribers' && this.mapMode !== 'market-value') return;
         
         const stateData = this.data.by_state.filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO);
         
@@ -916,7 +928,9 @@ class MapVisualizer {
             'att_postpaid': 'AT&T (Post)',
             'others_total': 'Others (carriers) (T)',
             'others_prepaid': 'Others (carriers) (Pre)',
-            'others_postpaid': 'Others (carriers) (Post)'
+            'others_postpaid': 'Others (carriers) (Post)',
+            'revenue_inr_cr': 'Market Value (INR Cr)',
+            'annual_revenue_b': 'Market Value ($B)'
         };
         return labels[metric] || metric;
     }
@@ -976,10 +990,33 @@ class MapVisualizer {
     }
     
     async applyMapMode(mode) {
-        this.mapMode = mode;
         const metricGroup = document.getElementById('metric-control-group');
         const dcTiersGroup = document.getElementById('dc-tiers-control-group');
         const hubPairsGroup = document.getElementById('hub-pairs-control-group');
+        const metricSelect = document.getElementById('metric-select');
+        const isIndia = this.country === 'india' || this.country === 'india-option-b';
+        const revenueMetric = isIndia ? 'revenue_inr_cr' : 'annual_revenue_b';
+
+        if (mode === 'market-value') {
+            if (this.currentMetric !== revenueMetric) {
+                if (this.currentMetric !== 'revenue_inr_cr' && this.currentMetric !== 'annual_revenue_b') {
+                    this.lastSubscriberMetric = this.currentMetric;
+                }
+                this.currentMetric = revenueMetric;
+                if (metricSelect) metricSelect.value = revenueMetric;
+                this.updateColorScale();
+            }
+            this.marketValueOverrideActive = true;
+        } else if (mode === 'subscribers' && this.marketValueOverrideActive) {
+            const restoredMetric = this.lastSubscriberMetric || 'total_subscribers';
+            this.currentMetric = restoredMetric;
+            if (metricSelect) metricSelect.value = restoredMetric;
+            this.updateColorScale();
+            this.marketValueOverrideActive = false;
+        }
+
+        this.mapMode = mode;
+
         if (metricGroup) metricGroup.style.display = mode === 'subscribers' ? '' : 'none';
         if (dcTiersGroup) dcTiersGroup.style.display = mode === 'dc-tiers' ? '' : 'none';
         if (hubPairsGroup) hubPairsGroup.style.display = mode === 'hub-pairs' ? '' : 'none';
@@ -1002,7 +1039,9 @@ class MapVisualizer {
             .transition().duration(500)
             .attr('fill', d => this.getStateFill(d))
             .attr('stroke', strokeC)
-            .attr('stroke-width', strokeW);
+            .attr('stroke-width', strokeW)
+            .style('stroke', strokeC)
+            .style('stroke-width', strokeW);
         
         if (mode === 'hub-pairs') {
             window.__hubPairsVisible = {
@@ -1030,6 +1069,10 @@ class MapVisualizer {
     changeMetric(metric) {
         this.debugLog(`[MapVisualizer] Changing metric from '${this.currentMetric}' to '${metric}'`);
         this.currentMetric = metric;
+        this.marketValueOverrideActive = false;
+        if (metric !== 'revenue_inr_cr' && metric !== 'annual_revenue_b') {
+            this.lastSubscriberMetric = metric;
+        }
         this.updateColorScale();
         
         // Update state colors
@@ -1041,6 +1084,8 @@ class MapVisualizer {
             .attr('fill', d => this.getStateFill(d))
             .attr('stroke', this.STATE_STROKE_COLOR)
             .attr('stroke-width', this.STATE_STROKE_WIDTH)
+            .style('stroke', this.STATE_STROKE_COLOR)
+            .style('stroke-width', this.STATE_STROKE_WIDTH)
             .style('fill-opacity', this.STATE_FILL_OPACITY);
         
         // Update state labels with new metric values
@@ -1225,12 +1270,14 @@ class MapVisualizer {
             
             await visualizer.initialize();
             visualizer.debugLog('MapVisualizer initialized successfully');
+            const modeSel = document.getElementById('map-mode-select');
+            const mode = window.__pendingMapMode || (modeSel ? modeSel.value : 'subscribers') || 'subscribers';
             if (window.__pendingMapMode) {
-                const mode = window.__pendingMapMode;
                 delete window.__pendingMapMode;
-                const modeSel = document.getElementById('map-mode-select');
-                if (modeSel) modeSel.value = mode;
-                visualizer.applyMapMode(mode);
+            }
+            if (modeSel) modeSel.value = mode;
+            if (mode !== 'subscribers') {
+                await visualizer.applyMapMode(mode);
             }
         } catch (error) {
             console.error('Failed to initialize MapVisualizer:', error);
