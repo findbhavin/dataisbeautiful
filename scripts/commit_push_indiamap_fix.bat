@@ -13,8 +13,7 @@ echo Creating/checkout fix branch...
 git checkout -B fix/indiamap-map-analytics
 
 echo Staging India map fix files...
-git add app/routers/geo.py static/js/custom_maps.js static/js/map_semantic_zoom.js
-git add scripts/commit_push_indiamap_fix.bat scripts/download_india_geojson_with_pok.py
+git add static/js/map_semantic_zoom.js tests/test_india_map.py scripts/commit_push_indiamap_fix.bat
 
 echo Checking branch...
 git branch --show-current
@@ -22,9 +21,9 @@ if errorlevel 1 exit /b 1
 
 echo.
 echo Committing...
-git commit --no-verify -m "fix: India map POK, Unknown tooltip, India state lookup" -m "- Include POK (Pakistan-occupied Kashmir) in India map via datameet GeoJSON" -m "- Fix Unknown/No data center: use NAME_1 for India, India state key lookup" -m "- Tooltip for India regions without data (e.g. POK)" -m "- India state support in Data Centers paste (custom_maps)" -m "- Script: download_india_geojson_with_pok.py"
+git commit --no-verify -m "fix: India map rendering - fitSize, container dimensions, path safety" -m "- Use fitSize for reliable India projection (fallback to manual scale)" -m "- Use container dimensions when available for correct aspect ratio" -m "- Path attr: handle null from geoPath to avoid invalid d" -m "- Add test_india_map.py: validate GeoJSON structure for D3 rendering"
 if errorlevel 1 (
-    git commit --no-verify -m "fix: India map POK, Unknown tooltip, India state lookup"
+    git commit --no-verify -m "fix: India map rendering - fitSize, container dimensions, path safety"
 )
 if errorlevel 1 (
     echo Commit failed. Run this from Command Prompt OUTSIDE Cursor.
