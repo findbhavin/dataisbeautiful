@@ -198,23 +198,34 @@ class MapVisualizer {
     }
     
     /**
-     * Load topology/geography. Both US and India use TopoJSON.
+     * Load topology/geography. US uses TopoJSON. India uses GeoJSON (TopoJSON has invalid arc indices).
      */
     async loadTopology() {
         if (this.country === 'india') {
             try {
+                const geoRes = await fetch('/api/geo/india/geojson/states');
+                if (geoRes.ok) {
+                    const geojson = await geoRes.json();
+                    if (geojson?.features?.length) {
+                        console.log('✓ Loaded India GeoJSON:', geojson.features.length, 'states');
+                        return { type: 'geojson', data: geojson };
+                    }
+                }
                 const indiaTopoJson = await d3.json('/api/geo/topojson/india-states');
-                if (!indiaTopoJson || !indiaTopoJson.objects || !indiaTopoJson.objects.states) {
-                    throw new Error('India TopoJSON has invalid structure');
+                if (!indiaTopoJson?.objects?.states?.geometries?.length) throw new Error('India TopoJSON invalid');
+                try {
+                    const states = topojson.feature(indiaTopoJson, indiaTopoJson.objects.states);
+                    if (states?.features?.length) {
+                        console.log('✓ Loaded India TopoJSON:', states.features.length, 'states');
+                        return { type: 'geojson', data: states };
+                    }
+                } catch (te) {
+                    console.warn('India TopoJSON conversion failed, GeoJSON not available:', te.message);
                 }
-                if (!indiaTopoJson.arcs || indiaTopoJson.arcs.length === 0) {
-                    throw new Error('India TopoJSON has no arc data');
-                }
-                console.log('✓ Loaded India TopoJSON:', indiaTopoJson.objects.states.geometries.length, 'states');
-                return { type: 'topojson', data: indiaTopoJson };
+                throw new Error('Unable to load India map. Run: py scripts/download_india_geojson.py');
             } catch (e) {
-                console.error('India TopoJSON failed:', e);
-                throw new Error('Unable to load India map. Ensure data/topojson/india_states.topo.json exists with valid geographic data.');
+                console.error('India map failed:', e);
+                throw e;
             }
         }
         const localPath = '/api/geo/topojson/states';
@@ -239,19 +250,24 @@ class MapVisualizer {
         try {
             const topo = await this.loadTopology();
             let states;
-            
-            // Both US and India now use TopoJSON
-            const topoData = topo.data;
-            if (!topoData || !topoData.objects || !topoData.objects.states) {
-                console.error('Invalid TopoJSON structure:', topoData);
-                this.showError('Map data is unavailable. Please refresh the page.');
-                return;
+            if (topo.type === 'geojson') {
+                states = topo.data;
+                if (!states?.features?.length) {
+                    this.showError('Map data is empty. Please refresh the page.');
+                    return;
+                }
+            } else {
+                const topoData = topo.data;
+                if (!topoData?.objects?.states) {
+                    this.showError('Map data is unavailable. Please refresh the page.');
+                    return;
+                }
+                if (!topoData.arcs?.length) {
+                    this.showError('Map topology data is incomplete.');
+                    return;
+                }
+                states = topojson.feature(topoData, topoData.objects.states);
             }
-            if (!topoData.arcs || topoData.arcs.length === 0) {
-                this.showError('Map topology data is incomplete. Check the TopoJSON file.');
-                return;
-            }
-            states = topojson.feature(topoData, topoData.objects.states);
             
             this.debugLog(`Loaded ${states.features.length} state features from TopoJSON`);
             
@@ -373,11 +389,12 @@ class MapVisualizer {
                 if (matchByIso) return matchByIso;
             }
             
-            // Try matching by name
-            const name = feature.properties?.name || feature.properties?.NAME_1;
+            // Try matching by name (normalize " & " to " and " for GeoJSON compatibility)
+            const name = (feature.properties?.name || feature.properties?.NAME_1 || '').replace(/\s*&\s*/g, ' and ').trim();
             if (!name) return null;
+            const norm = (s) => (s || '').replace(/\s*&\s*/g, ' and ').toLowerCase().trim();
             return this.data.by_state.find(d =>
-                d.state_name && d.state_name.toLowerCase() === String(name).toLowerCase()
+                d.state_name && norm(d.state_name) === norm(name)
             ) || null;
         }
         let fipsCode = null;
@@ -1200,7 +1217,11 @@ class MapVisualizer {
             window.__country = sel.value;
             if (typeof window.clearMapCaches === 'function') window.clearMapCaches();
             const dt = document.getElementById('data-table-container');
-            if (dt) dt.dataset.loaded = 'false';
+            if (dt) {
+                dt.dataset.loaded = 'false';
+                dt.innerHTML = '';
+            }
+            window.dispatchEvent(new CustomEvent('country-changed', { detail: { country: sel.value } }));
             d3.select('#map-svg-container').html('<div class="loading"><div class="spinner"></div>Loading visualization...</div>');
             initializeMap();
         });

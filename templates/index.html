@@ -335,7 +335,10 @@
                             s.classList.toggle('active', s.dataset.page === page);
                         });
                         document.getElementById('legend-map').style.display = (page === 'map') ? 'block' : 'none';
-                        if (page === 'data') loadDataTable();
+                        if (page === 'data') {
+                            updateDataPageForCountry();
+                            loadDataTable();
+                        }
                         if (page === 'analytics') {
                             setTimeout(() => document.querySelector('.analytics-page .tab-btn.active')?.click(), 50);
                         }
@@ -384,6 +387,29 @@
                     await renderHubPairMap('hub-pairs-output', raw);
                 });
                 
+                // Sync Data page UI with country (hide US "Others" when India)
+                function updateDataPageForCountry() {
+                    const isIndia = window.__country === 'india';
+                    document.querySelector('.info-banner')?.style.setProperty('display', isIndia ? 'none' : '');
+                    document.querySelector('.others-data-card')?.style.setProperty('display', isIndia ? 'none' : '');
+                    const h3 = document.querySelector('.data-table-section h3');
+                    if (h3) h3.textContent = isIndia ? 'State-by-State Data (India)' : 'State-by-State Data (32 states + Others aggregate)';
+                }
+                window.addEventListener('country-changed', () => {
+                    updateDataPageForCountry();
+                    const dataSection = document.querySelector('.page-section[data-page="data"]');
+                    if (dataSection?.classList.contains('active')) {
+                        const c = document.getElementById('data-table-container');
+                        if (c) { c.dataset.loaded = 'false'; c.innerHTML = ''; }
+                        setTimeout(loadDataTable, 100);
+                    }
+                    const analyticsSection = document.querySelector('.page-section[data-page="analytics"]');
+                    if (analyticsSection?.classList.contains('active')) {
+                        const activeTab = document.querySelector('.analytics-page .tab-btn.active');
+                        if (activeTab) setTimeout(() => activeTab.click(), 150);
+                    }
+                });
+
                 // Load data table when Data page is first shown
                 function loadDataTable() {
                     const container = document.getElementById('data-table-container');
