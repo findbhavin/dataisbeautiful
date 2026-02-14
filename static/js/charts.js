@@ -107,16 +107,32 @@ async function renderMarketSharePie(containerId, data) {
     }));
 
     // Requested sizing: donut area uses ~2:1 width:height.
-    const width = Math.max(720, Math.min(940, Math.round(container.node()?.clientWidth || 760)));
-    const height = Math.round(width / 2);
-    const radius = Math.min(height * 0.39, width * 0.2);
+    // Render inside a dedicated scroll viewport so mobile users can pan to see the full chart.
+    const containerWidth = Math.round(container.node()?.clientWidth || 760);
+    const donutCanvasWidth = Math.max(720, Math.min(940, Math.round(containerWidth * 1.8)));
+    const donutCanvasHeight = Math.round(donutCanvasWidth / 2);
+    const sidePadding = 130;
+    const verticalPadding = 36;
+    const width = donutCanvasWidth + sidePadding * 2;
+    const height = donutCanvasHeight + verticalPadding * 2;
+    const radius = Math.min(donutCanvasHeight * 0.39, donutCanvasWidth * 0.2);
     const innerRadius = radius * 0.56;
     const rawLabelRadius = radius + Math.max(26, radius * 0.2);
-    const labelRadius = Math.min(rawLabelRadius, (height / 2) - 16);
-    const svg = container.append('svg')
+    const labelRadius = Math.min(rawLabelRadius, (donutCanvasHeight / 2) - 12);
+
+    const chartViewport = container.append('div')
+        .attr('class', 'market-share-scroll')
+        .style('max-width', '100%')
+        .style('overflow-x', 'auto')
+        .style('overflow-y', 'auto')
+        .style('-webkit-overflow-scrolling', 'touch')
+        .style('touch-action', 'pan-x pan-y pinch-zoom')
+        .style('overscroll-behavior', 'contain')
+        .style('padding-bottom', '4px');
+
+    const svg = chartViewport.append('svg')
         .attr('width', width)
         .attr('height', height)
-        .style('max-width', '100%')
         .append('g')
         .attr('transform', `translate(${width / 2},${height / 2})`);
 
