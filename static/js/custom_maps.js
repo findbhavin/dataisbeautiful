@@ -37,6 +37,7 @@ window.clearMapCaches = function() {
     hubPairsDefaultCache = null;
     window.__hubPairsCacheCountry = null;
     window.__dcTiersCacheCountry = null;
+    window.__dataCenterTierCityLabels = null;
 };
 
 const HUB_PAIRS_COLORS = { dual: '#0284c7', single: '#16a34a', superCore: '#dc2626' };
@@ -110,12 +111,24 @@ async function loadDataCenterTiers() {
         const tier1 = new Set((data.tier1?.states || []).map(toKey).filter(Boolean));
         const tier2 = new Set((data.tier2?.states || []).map(toKey).filter(Boolean));
         const tier3 = new Set((data.tier3?.states || []).map(toKey).filter(Boolean));
+        const cityLabels = {};
+        ['tier1', 'tier2', 'tier3'].forEach(tierKey => {
+            (data[tierKey]?.states || []).forEach(s => {
+                const key = toKey(s);
+                if (!key) return;
+                const firstCity = Array.isArray(s.cities) && s.cities.length > 0 ? s.cities[0] : (s.city || '');
+                if (!cityLabels[key]) cityLabels[key] = {};
+                cityLabels[key][tierKey] = firstCity || s.state || key;
+            });
+        });
         dataCenterTiersCache = { tier1, tier2, tier3 };
         window.__dataCenterTiers = dataCenterTiersCache;
+        window.__dataCenterTierCityLabels = cityLabels;
         window.__dcTiersCacheCountry = cacheKey;
     } catch (e) {
         dataCenterTiersCache = { tier1: new Set(), tier2: new Set(), tier3: new Set() };
         window.__dataCenterTiers = dataCenterTiersCache;
+        window.__dataCenterTierCityLabels = {};
     }
     return dataCenterTiersCache;
 }
