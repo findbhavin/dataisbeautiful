@@ -133,15 +133,6 @@ class MapVisualizer {
         this.debugLog('[MapVisualizer] Setting up SVG canvas');
         const container = d3.select(`#${this.containerId}`);
         container.selectAll('*').remove();
-        const node = container.node();
-        if (node && node.getBoundingClientRect) {
-            const rect = node.getBoundingClientRect();
-            if (rect.width > 50 && rect.height > 50) {
-                this.width = Math.round(rect.width);
-                this.height = Math.max(400, Math.round(rect.height));
-                this.debugLog('[MapVisualizer] Using container dimensions:', this.width, 'x', this.height);
-            }
-        }
         this.svg = container
             .append('svg')
             .attr('id', 'map')
@@ -286,29 +277,13 @@ class MapVisualizer {
                 return;
             }
 
-            // India: fit geometry to viewport. Use fitSize for reliable rendering.
+            // India: fit loaded geometry to SVG viewport (avoids hardcoded scale on different screen sizes).
             if (this.country === 'india') {
-                const pad = 40;
-                const w = Math.max(100, this.width - pad);
-                const h = Math.max(100, this.height - pad);
-                try {
-                    if (typeof this.projection.fitSize === 'function') {
-                        this.projection.fitSize([w, h], states);
-                    } else {
-                        this.projection.fitExtent([[pad / 2, pad / 2], [this.width - pad / 2, this.height - pad / 2]], states);
-                    }
-                    const t = this.projection.translate();
-                    const s = this.projection.scale();
-                    if (typeof s === 'number' && isFinite(s) && s > 0 && Array.isArray(t) && t.length >= 2) {
-                        this.path = d3.geoPath().projection(this.projection);
-                    } else {
-                        throw new Error('Projection produced invalid scale/translate');
-                    }
-                } catch (e) {
-                    console.warn('India fitSize/fitExtent failed, using fallback:', e.message);
-                    this.projection.scale(1100).center([78, 22]).translate([this.width / 2, this.height / 2]);
-                    this.path = d3.geoPath().projection(this.projection);
-                }
+                this.projection.fitExtent(
+                    [[20, 20], [this.width - 20, this.height - 20]],
+                    states
+                );
+                this.path = d3.geoPath().projection(this.projection);
             }
             
             // Setup color scale based on current metric
