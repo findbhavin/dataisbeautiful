@@ -110,17 +110,32 @@ async def get_india_spectrum() -> Dict[str, Any]:
 
 @router.get("/india/revenue-by-state")
 async def get_india_revenue_by_state() -> Dict[str, Any]:
-    """India revenue by state (INR Cr). Returns revenue_top10 for chart compatibility."""
+    """India revenue by state (INR Cr). Returns all states from state_level_mobile for map/bar chart."""
     try:
-        data = _load_json("india/analytics.json")
-        rev = data.get("revenue_by_state", [])[:10]
+        from app.services.india_data_loader import load_india_mobile_data
+        data = load_india_mobile_data()
+        by_state = data.get("by_state", [])
+        rev = sorted(
+            [{"state": d.get("state_name", ""), "revenue_inr_cr": d.get("revenue_inr_cr", 0)} for d in by_state if d.get("state_name")],
+            key=lambda x: x["revenue_inr_cr"],
+            reverse=True
+        )
         revenue_top10 = [
-            {"state": d["state"], "revenue_inr_cr": d.get("revenue_inr_cr", 0), "annual_revenue_b": d.get("revenue_inr_cr", 0) / 1000, "growth_pct": d.get("growth_pct", 0)}
+            {"state": d["state"], "revenue_inr_cr": d["revenue_inr_cr"], "annual_revenue_b": d["revenue_inr_cr"] / 1000}
             for d in rev
         ]
         return {"revenue_top10": revenue_top10, "country": "India", "currency": "INR"}
-    except HTTPException:
-        return {"revenue_top10": []}
+    except Exception:
+        try:
+            data = _load_json("india/analytics.json")
+            rev = data.get("revenue_by_state", [])
+            revenue_top10 = [
+                {"state": d["state"], "revenue_inr_cr": d.get("revenue_inr_cr", 0), "annual_revenue_b": d.get("revenue_inr_cr", 0) / 1000, "growth_pct": d.get("growth_pct", 0)}
+                for d in rev[:15]
+            ]
+            return {"revenue_top10": revenue_top10, "country": "India", "currency": "INR"}
+        except HTTPException:
+            return {"revenue_top10": []}
 
 
 @router.get("/india/market-wide")

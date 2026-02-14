@@ -574,7 +574,8 @@ class MapVisualizer {
     updateColorScale() {
         const values = this.data.by_state
             .filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO)
-            .map(d => d[this.currentMetric]);
+            .map(d => d[this.currentMetric])
+            .filter(v => v != null && !isNaN(v));
         
         const extent = d3.extent(values);
         
@@ -582,9 +583,13 @@ class MapVisualizer {
         this.debugLog('[MapVisualizer] Value extent:', extent, 'min:', extent[0], 'max:', extent[1]);
         this.debugLog('[MapVisualizer] Number of data points:', values.length);
         
+        const isRevenue = this.currentMetric === 'revenue_inr_cr';
+        const revenueScheme = ['#b91c1c', '#f87171', '#fef08a', '#86efac', '#15803d'];
+        const scheme = isRevenue ? revenueScheme : this.colorScheme;
+        
         this.colorScale = d3.scaleQuantize()
             .domain(extent)
-            .range(this.colorScheme);
+            .range(scheme);
         
         this.debugLog('[MapVisualizer] Color scale domain:', this.colorScale.domain());
         this.debugLog('[MapVisualizer] Color scale range:', this.colorScale.range());
@@ -608,8 +613,8 @@ class MapVisualizer {
         }
         if (this.mapMode === 'dc-tiers') {
             legendContainer.append('div').style('background-color', '#084081').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Tier 1 - Super Core (circle)');
-            legendContainer.append('div').style('background-color', '#0868ac').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Tier 2 - Regional (square)');
-            legendContainer.append('div').style('background-color', '#43a2ca').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Tier 3 - Edge (triangle)');
+            legendContainer.append('div').style('background-color', '#0d9488').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Tier 2 - Regional (square)');
+            legendContainer.append('div').style('background-color', '#ea580c').style('flex', '1').style('height', '100%').style('min-width', '50px').attr('title', 'Tier 3 - Edge (triangle)');
             legendContainer.style('display', 'flex');
             if (!minLabel.empty()) minLabel.text('Tier 1');
             if (!maxLabel.empty()) maxLabel.text('Tier 3');
@@ -625,10 +630,12 @@ class MapVisualizer {
             return;
         }
         
+        const isRevenue = this.currentMetric === 'revenue_inr_cr';
+        const legendScheme = isRevenue ? ['#b91c1c', '#f87171', '#fef08a', '#86efac', '#15803d'] : this.colorScheme;
         const legendWidth = legendContainer.node().clientWidth;
-        const segmentWidth = legendWidth / this.colorScheme.length;
+        const segmentWidth = legendWidth / legendScheme.length;
         
-        this.colorScheme.forEach((color) => {
+        legendScheme.forEach((color) => {
             legendContainer.append('div')
                 .style('background-color', color)
                 .style('width', `${segmentWidth}px`)
@@ -638,7 +645,8 @@ class MapVisualizer {
         
         const values = this.data.by_state
             .filter(d => d.state_iso !== this.OTHERS_AVG_STATE_ISO)
-            .map(d => d[this.currentMetric]);
+            .map(d => d[this.currentMetric])
+            .filter(v => v != null && !isNaN(v));
         const extent = d3.extent(values);
         if (!minLabel.empty() && !maxLabel.empty()) {
             minLabel.text(this.formatValue(extent[0]));
@@ -658,9 +666,10 @@ class MapVisualizer {
         this.clearStateCentroidDots();
         if (!this.statesFeatures) return;
         const layer = this.g.append('g').attr('class', 'state-centroid-dots');
-        const tierColors = { tier1: '#084081', tier2: '#0868ac', tier3: '#43a2ca' };
+        const tierColors = { tier1: '#084081', tier2: '#0d9488', tier3: '#ea580c' };
         const shapeSize = 6;
         const offsetStep = 10;
+        const fillOpacity = 0.6;
         this.statesFeatures.forEach(d => {
             if (this.mapMode === 'data-centers') {
                 const stateValues = window.__dataCentersStateValues || {};
@@ -677,7 +686,7 @@ class MapVisualizer {
                 if (!projected) return;
                 const color = /super\s*core/i.test(value) ? '#084081' : '#0868ac';
                 layer.append('circle').attr('cx', projected[0]).attr('cy', projected[1]).attr('r', shapeSize)
-                    .attr('fill', color).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
+                    .attr('fill', color).attr('fill-opacity', 0.6).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
                 return;
             }
             const activeTiers = this.getActiveTiersForState(d);
@@ -692,19 +701,19 @@ class MapVisualizer {
             const startX = cx - totalWidth / 2;
             activeTiers.forEach((tier, i) => {
                 const x = activeTiers.length === 1 ? cx : startX + i * offsetStep;
-                const color = tierColors[tier] || '#43a2ca';
+                const color = tierColors[tier] || '#ea580c';
                 if (tier === 'tier1') {
                     layer.append('circle').attr('cx', x).attr('cy', cy).attr('r', shapeSize)
-                        .attr('fill', color).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
+                        .attr('fill', color).attr('fill-opacity', fillOpacity).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
                 } else if (tier === 'tier2') {
                     const s = shapeSize * 1.2;
                     layer.append('rect').attr('x', x - s).attr('y', cy - s).attr('width', s * 2).attr('height', s * 2)
-                        .attr('fill', color).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
+                        .attr('fill', color).attr('fill-opacity', fillOpacity).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
                 } else {
                     const r = shapeSize * 1.3;
                     const path = `M ${x} ${cy - r} L ${x + r} ${cy + r} L ${x - r} ${cy + r} Z`;
                     layer.append('path').attr('d', path)
-                        .attr('fill', color).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
+                        .attr('fill', color).attr('fill-opacity', fillOpacity).attr('stroke', this.DC_MODE_STROKE_COLOR).attr('stroke-width', 2).style('pointer-events', 'none');
                 }
             });
         });
@@ -908,6 +917,11 @@ class MapVisualizer {
     }
     
     formatValue(value) {
+        if (this.currentMetric === 'revenue_inr_cr') {
+            if (value >= 1000) return `₹${(value / 1000).toFixed(1)}K Cr`;
+            if (value >= 1) return `₹${value.toFixed(0)} Cr`;
+            return value != null ? `₹${value}` : '0';
+        }
         if (this.country === 'india' || this.country === 'india-option-b') {
             if (value >= 1) return `${value.toFixed(1)} Cr`;
             if (value > 0) return `${(value * 10).toFixed(1)} L`;
@@ -1162,7 +1176,8 @@ class MapVisualizer {
             ['bsnl_total', 'BSNL (Cr)'],
             ['others_total', 'Others (Cr)'],
             ['urban_subscribers', 'Urban (Cr)'],
-            ['rural_subscribers', 'Rural (Cr)']
+            ['rural_subscribers', 'Rural (Cr)'],
+            ['revenue_inr_cr', 'Revenue (INR Cr)']
         ];
         const usOpts = [
             ['total_subscribers', 'Total Mobile (T)'],

@@ -108,7 +108,7 @@ async function renderMarketSharePie(containerId, data) {
 
     const pie = d3.pie().value(d => d.subscriber_share_pct || d.share_pct).sort(null);
     const arc = d3.arc().innerRadius(innerRadius).outerRadius(radius).cornerRadius(4);
-    const arcLabel = d3.arc().innerRadius(radius * 0.75).outerRadius(radius * 0.75);
+    const labelRadius = radius + 42;
 
     const arcs = svg.selectAll('arc').data(pie(data.market_share)).join('g');
     arcs.append('path')
@@ -132,11 +132,23 @@ async function renderMarketSharePie(containerId, data) {
 
     const isLight = document.body.classList.contains('theme-light');
     const labelFill = isLight ? '#1e293b' : '#fff';
-    arcs.filter(d => (d.endAngle - d.startAngle) > 0.15).append('text')
-        .attr('transform', d => `translate(${arcLabel.centroid(d)})`)
-        .attr('text-anchor', 'middle').attr('fill', labelFill).attr('font-size', 13).attr('font-weight', 700)
-        .text(d => `${d.data.subscriber_share_pct || d.data.share_pct}%`)
-        .style('opacity', 0).transition().delay(400).style('opacity', 1);
+    arcs.filter(d => (d.endAngle - d.startAngle) > 0.08).each(function(d) {
+        const midAngle = (d.startAngle + d.endAngle) / 2;
+        const innerX = Math.sin(midAngle) * radius;
+        const innerY = -Math.cos(midAngle) * radius;
+        const outerX = Math.sin(midAngle) * labelRadius;
+        const outerY = -Math.cos(midAngle) * labelRadius;
+        const anchor = outerX > 0 ? 'start' : 'end';
+        const textX = outerX > 0 ? outerX + 6 : outerX - 6;
+        const g = d3.select(this);
+        g.append('line').attr('x1', innerX).attr('y1', innerY).attr('x2', outerX).attr('y2', outerY)
+            .attr('stroke', isLight ? '#64748b' : 'rgba(255,255,255,0.5)').attr('stroke-width', 1);
+        g.append('text').attr('transform', `translate(${textX},${outerY})`)
+            .attr('text-anchor', anchor).attr('dominant-baseline', 'middle')
+            .attr('fill', labelFill).attr('font-size', 12).attr('font-weight', 600)
+            .text(`${d.data.carrier || d.data.operator}: ${d.data.subscriber_share_pct || d.data.share_pct}%`)
+            .style('opacity', 0).transition().delay(400).style('opacity', 1);
+    });
 
     // Center label: total subscribers (data-first: prominent values)
     const isIndia = data.country === 'India' || (window.__country === 'india' || window.__country === 'india-option-b');
@@ -150,12 +162,12 @@ async function renderMarketSharePie(containerId, data) {
         .attr('fill', isLight ? '#64748b' : 'rgba(255,255,255,0.85)').attr('font-size', 13)
         .text('Total Subscribers');
 
-    // Legend with insights
+    // Optional legend with insights (carrier names already shown outside donut)
     const opKey = d => d.carrier || d.operator;
-    const legend = container.append('div').attr('class', 'chart-legend').style('margin-top', '16px').style('display', 'flex').style('flex-wrap', 'wrap').style('gap', '12px 20px');
+    const legend = container.append('div').attr('class', 'chart-legend').style('margin-top', '12px').style('font-size', '11px').style('color', isLight ? '#64748b' : 'rgba(255,255,255,0.7)');
     data.market_share.forEach(d => {
-        legend.append('div').style('font-size', '12px').style('line-height', '1.4')
-            .html(`<span style="display:inline-block;width:14px;height:14px;background:${color(opKey(d))};margin-right:6px;border-radius:3px;vertical-align:middle"></span><strong>${opKey(d)}</strong>: ${d.insight || ''}`);
+        legend.append('div').style('margin-bottom', '4px')
+            .html(`<span style="display:inline-block;width:10px;height:10px;background:${color(opKey(d))};margin-right:6px;border-radius:2px;vertical-align:middle"></span>${d.insight || ''}`);
     });
 }
 
@@ -224,8 +236,6 @@ async function renderMetrosBar(containerId, data) {
             .attr('width', d => x(d[1]) - x(d[0]));
     });
 
-    const isLight = document.body.classList.contains('theme-light');
-    const labelFill = isLight ? '#1e293b' : '#fff';
     const minSegment = isIndia ? 0.5 : 1.5;
     stacked.forEach((layer, i) => {
         const key = keys[i];
@@ -234,7 +244,7 @@ async function renderMetrosBar(containerId, data) {
             .attr('x', d => x(d[0]) + (x(d[1]) - x(d[0])) / 2)
             .attr('y', d => y(d.data.metro) + y.bandwidth() / 2)
             .attr('dy', '0.35em').attr('text-anchor', 'middle')
-            .attr('fill', labelFill).attr('font-size', 10).attr('font-weight', 600)
+            .attr('fill', '#fff').attr('font-size', 10).attr('font-weight', 600)
             .text(d => d.data[key] >= 0.5 ? d.data[key].toFixed(1) : '')
             .style('opacity', 0).transition().delay(500).style('opacity', 1);
     });
@@ -370,16 +380,22 @@ async function renderRevenueBar(containerId, data) {
 
     const isIndia = data.country === 'India' || (window.__country === 'india' || window.__country === 'india-option-b');
     const states = data.revenue_top10;
+    if (states.length > 15) {
+        container.style('max-height', '420px').style('overflow-y', 'auto');
+    } else {
+        container.style('max-height', null).style('overflow-y', null);
+    }
     const count = states.length;
     const subtitleEl = document.getElementById('revenue-subtitle');
-    if (subtitleEl) subtitleEl.textContent = count < 51 ? `(Top ${count} States)` : '(All States)';
+    if (subtitleEl) subtitleEl.textContent = count > 15 ? '(All States)' : `(Top ${count} States)`;
 
     const valueKey = isIndia ? 'annual_revenue_b' : 'annual_revenue_b';
     const maxVal = d3.max(states, d => d.annual_revenue_b) * 1.05;
 
     const margin = { top: 20, right: 90, bottom: 30, left: 100 };
     const width = 700 - margin.left - margin.right;
-    const height = 380 - margin.top - margin.bottom;
+    const bandHeight = 24;
+    const height = Math.min(380 - margin.top - margin.bottom, Math.max(200, count * bandHeight));
 
     const svg = container.append('svg').attr('width', width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom)
         .append('g').attr('transform', `translate(${margin.left},${margin.top})`);
@@ -409,11 +425,14 @@ async function renderRevenueBar(containerId, data) {
     const isLight = document.body.classList.contains('theme-light');
     const barLabelFill = isLight ? '#1e293b' : '#fff';
     const formatLabel = isIndia
-        ? d => `₹${Math.round((d.revenue_inr_cr != null ? d.revenue_inr_cr : d.annual_revenue_b * 1000) / 1000)}K Cr`
+        ? d => {
+            const v = d.revenue_inr_cr != null ? d.revenue_inr_cr : d.annual_revenue_b * 1000;
+            return v >= 1000 ? `₹${Math.round(v / 1000)}K Cr` : `₹${Math.round(v)} Cr`;
+        }
         : d => `$${d.annual_revenue_b}B`;
     svg.selectAll('.bar-label').data(states).join('text').attr('class', 'bar-label')
         .attr('x', d => x(d.annual_revenue_b) + 6).attr('y', d => y(d.state) + y.bandwidth() / 2)
-        .attr('dy', '0.35em').attr('fill', barLabelFill).attr('font-size', 13).attr('font-weight', 700)
+        .attr('dy', '0.35em').attr('fill', '#fff').attr('font-size', 12).attr('font-weight', 700)
         .text(formatLabel)
         .style('opacity', 0).transition().delay(550).style('opacity', 1);
 
